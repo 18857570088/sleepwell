@@ -1,0 +1,18 @@
+[Unit]
+Description=Sleepwell API Service
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/sleepwell-api
+EnvironmentFile=/etc/sleepwell-api/sleepwell-api.env
+ExecStart=/opt/sleepwell-api/venv/bin/uvicorn app:app --host 127.0.0.1 --port ${SLEEPWELL_PORT} --proxy-headers
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/sleepwell-api/app.log
+StandardError=append:/var/log/sleepwell-api/error.log
+
+[Install]
+WantedBy=multi-user.target

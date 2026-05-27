@@ -1,0 +1,25 @@
+.gradle/
+build/
+app/build/
+local.properties
+
+# Local secrets and deployment parameters
+*.docx
+*.env
+!*.env.example
+key.properties
+*.jks
+*.keystore
+
+# Generated artifacts
+*.apk
+*.aab
+*.ap_
+__pycache__/
+*.pyc
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

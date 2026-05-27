@@ -1,0 +1,267 @@
+
+<style>
+  .wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;padding:1rem 0 2rem;}
+  .phone{width:230px;flex-shrink:0;}
+  .pframe{background:var(--color-background-primary);border:2px solid var(--color-border-primary);border-radius:36px;overflow:hidden;}
+  .notch{background:#111;height:28px;display:flex;align-items:center;justify-content:center;}
+  .pill{background:#333;width:60px;height:10px;border-radius:9px;}
+  .sbar{display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:10px;color:var(--color-text-secondary);background:var(--color-background-secondary);}
+  .scr{padding:12px 14px;background:var(--color-background-primary);}
+  .tbar{display:flex;justify-content:space-around;align-items:center;padding:6px 0 10px;border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);}
+  .ti{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;color:var(--color-text-tertiary);}
+  .ti.on{color:#185FA5;}
+  .ti i{font-size:18px;}
+  .plabel{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-align:center;margin:8px 0 0;}
+  .card{background:var(--color-background-secondary);border-radius:12px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--color-border-tertiary);}
+  .slabel{font-size:9px;font-weight:500;color:var(--color-text-secondary);letter-spacing:.04em;margin:10px 0 5px;}
+  .opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;margin-bottom:5px;border:0.5px solid var(--color-border-tertiary);cursor:pointer;background:var(--color-background-primary);}
+  .opt.sel{border-color:#185FA5;background:#E6F1FB;}
+  .opt-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--color-border-secondary);flex-shrink:0;}
+  .opt-dot.sel{background:#185FA5;border-color:#185FA5;}
+  .opt-sq{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--color-border-secondary);flex-shrink:0;}
+  .opt-sq.sel{background:#185FA5;border-color:#185FA5;}
+  .opt-text{font-size:10px;color:var(--color-text-primary);}
+  .btn-p{display:block;text-align:center;padding:9px;border-radius:10px;font-size:11px;font-weight:500;margin-bottom:6px;background:#185FA5;color:#fff;border:none;cursor:pointer;}
+  .btn-s{display:block;text-align:center;padding:9px;border-radius:10px;font-size:11px;font-weight:500;margin-bottom:6px;background:var(--color-background-secondary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary);cursor:pointer;}
+  .prog-wrap{background:var(--color-background-secondary);height:5px;border-radius:3px;margin:6px 0 12px;overflow:hidden;}
+  .prog-fill{height:100%;border-radius:3px;background:#185FA5;}
+  .step-dot{width:7px;height:7px;border-radius:50%;background:var(--color-border-secondary);}
+  .step-dot.on{background:#185FA5;}
+  .input-mock{background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;font-size:10px;color:var(--color-text-secondary);margin-bottom:6px;width:100%;box-sizing:border-box;}
+  .badge{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:500;}
+  .badge-b{background:#E6F1FB;color:#0C447C;}
+  .badge-g{background:#EAF3DE;color:#27500A;}
+  .badge-a{background:#FAEEDA;color:#633806;}
+  .scale-row{display:flex;gap:4px;margin:6px 0;}
+  .scale-box{flex:1;height:24px;border-radius:5px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--color-text-secondary);cursor:pointer;}
+  .scale-box.sel{background:#185FA5;color:#fff;border-color:#185FA5;}
+  .tag-wrap{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;}
+  .tag{font-size:9px;padding:4px 8px;border-radius:8px;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);background:var(--color-background-primary);cursor:pointer;}
+  .tag.sel{background:#E6F1FB;color:#0C447C;border-color:#185FA5;}
+  .notif{background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;margin-bottom:6px;border-left:3px solid #185FA5;}
+  .notif p{font-size:9px;margin:0;}
+  .notif .nt{font-weight:500;color:var(--color-text-primary);margin-bottom:2px!important;}
+  .notif .nb{color:var(--color-text-secondary);}
+</style>
+
+<h2 class="sr-only">睡眠疗愈APP问卷系统界面原型，包含首次入组问卷和月度复查问卷四个页面</h2>
+<p style="font-size:13px;color:var(--color-text-secondary);text-align:center;margin:0 0 1.5rem;">新增问卷系统 · 4 个页面</p>
+
+<div class="wrap">
+
+  <!-- Q1: 问卷入口引导 -->
+  <div class="phone">
+    <div class="pframe">
+      <div class="notch"><div class="pill"></div></div>
+      <div class="sbar"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="scr">
+        <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 4px;">欢迎使用睡眠疗愈</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 12px;">完成首次评估，建立您的专属睡眠画像</p>
+
+        <div class="card" style="border-left:3px solid #185FA5;border-radius:0 12px 12px 0;">
+          <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 4px;"><i class="ti ti-clipboard-list" style="font-size:13px;margin-right:5px;color:#185FA5;" aria-hidden="true"></i>首次入组评估</p>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 8px;">约需 8-10 分钟 · 仅需完成一次</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-b">生活习性 · 32题</span>
+            <span class="badge badge-b">量表评估 · 7份</span>
+            <span class="badge badge-b">睡眠画像生成</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid #1D9E75;border-radius:0 12px 12px 0;">
+          <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 4px;"><i class="ti ti-refresh" style="font-size:13px;margin-right:5px;color:#1D9E75;" aria-hidden="true"></i>月度睡眠改善复查</p>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 8px;">约需 3-5 分钟 · 每月 1 次</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="badge badge-g">ISI 复测</span>
+            <span class="badge badge-g">习惯改善评估</span>
+            <span class="badge badge-g">效果反馈</span>
+          </div>
+        </div>
+
+        <p class="slabel">首次评估分为四步</p>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
+          <div class="step-dot on"></div>
+          <p style="font-size:9px;color:var(--color-text-primary);margin:0;flex:1;">基础信息</p>
+          <div class="step-dot on"></div>
+          <p style="font-size:9px;color:var(--color-text-primary);margin:0;flex:1;">生活习性</p>
+          <div class="step-dot"></div>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0;flex:1;">失眠归因</p>
+          <div class="step-dot"></div>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0;flex:1;">标准量表</p>
+        </div>
+
+        <button class="btn-p">开始首次评估 <i class="ti ti-arrow-right" style="font-size:12px;" aria-hidden="true"></i></button>
+        <p style="font-size:9px;color:var(--color-text-secondary);text-align:center;margin:4px 0 0;">数据仅用于个性化睡眠干预，严格保护隐私</p>
+      </div>
+      <div class="tbar" role="navigation" aria-label="底部导航">
+        <div class="ti on"><i class="ti ti-home" aria-hidden="true"></i><span>首页</span></div>
+        <div class="ti"><i class="ti ti-chart-line" aria-hidden="true"></i><span>数据</span></div>
+        <div class="ti"><i class="ti ti-heart-rate-monitor" aria-hidden="true"></i><span>疗愈</span></div>
+        <div class="ti"><i class="ti ti-users" aria-hidden="true"></i><span>社区</span></div>
+        <div class="ti"><i class="ti ti-user" aria-hidden="true"></i><span>我的</span></div>
+      </div>
+    </div>
+    <p class="plabel">① 问卷入口</p>
+  </div>
+
+  <!-- Q2: 首次问卷 - 生活习性 -->
+  <div class="phone">
+    <div class="pframe">
+      <div class="notch"><div class="pill"></div></div>
+      <div class="sbar"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="scr">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <i class="ti ti-arrow-left" style="font-size:16px;color:var(--color-text-secondary);" aria-label="返回"></i>
+            <p style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin:0;">生活习性评估</p>
+          </div>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0;">第 2 步 / 4</p>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:50%;"></div></div>
+
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">您有饮酒习惯吗？</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 8px;">如有，请选择通常的饮酒时间</p>
+        <div class="opt"><div class="opt-dot"></div><span class="opt-text">无饮酒习惯</span></div>
+        <div class="opt sel"><div class="opt-dot sel"></div><span class="opt-text" style="color:#0C447C;">有，通常在晚间</span></div>
+        <div class="opt"><div class="opt-dot"></div><span class="opt-text">有，通常在睡前1小时内</span></div>
+
+        <div style="height:8px;"></div>
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">咖啡因类饮品习惯</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 8px;">可多选（咖啡、可乐、浓茶等）</p>
+        <div class="opt"><div class="opt-sq"></div><span class="opt-text">无此习惯</span></div>
+        <div class="opt sel"><div class="opt-sq sel"><i class="ti ti-check" style="font-size:11px;color:#fff;" aria-hidden="true"></i></div><span class="opt-text" style="color:#0C447C;">下午（13:00-17:00）</span></div>
+        <div class="opt sel"><div class="opt-sq sel"><i class="ti ti-check" style="font-size:11px;color:#fff;" aria-hidden="true"></i></div><span class="opt-text" style="color:#0C447C;">傍晚（17:00-21:00）</span></div>
+        <div class="opt"><div class="opt-sq"></div><span class="opt-text">睡前2小时内</span></div>
+
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button class="btn-s" style="flex:1;margin:0;">上一题</button>
+          <button class="btn-p" style="flex:2;margin:0;">下一题 <i class="ti ti-arrow-right" style="font-size:11px;" aria-hidden="true"></i></button>
+        </div>
+      </div>
+    </div>
+    <p class="plabel">② 首次问卷·生活习性</p>
+  </div>
+
+  <!-- Q3: 首次问卷 - 失眠归因（多选标签） -->
+  <div class="phone">
+    <div class="pframe">
+      <div class="notch"><div class="pill"></div></div>
+      <div class="sbar"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="scr">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <i class="ti ti-arrow-left" style="font-size:16px;color:var(--color-text-secondary);" aria-label="返回"></i>
+            <p style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin:0;">失眠归因与心理特征</p>
+          </div>
+          <p style="font-size:9px;color:var(--color-text-secondary);margin:0;">第 3 步 / 4</p>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" style="width:75%;"></div></div>
+
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">您认为睡眠不好的相关因素</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 8px;">可多选，选出所有符合情况的选项</p>
+        <div class="tag-wrap">
+          <span class="tag sel">白天睡太多</span>
+          <span class="tag sel">睡前看手机</span>
+          <span class="tag sel">生活压力大</span>
+          <span class="tag">过晚喝咖啡</span>
+          <span class="tag sel">睡眠时间不规律</span>
+          <span class="tag">白天活动不足</span>
+          <span class="tag">熬夜加班</span>
+          <span class="tag">早上赖床</span>
+          <span class="tag">太早上床</span>
+          <span class="tag sel">睡前过度思虑</span>
+          <span class="tag">噪声/光线干扰</span>
+          <span class="tag">倒班工作</span>
+          <span class="tag sel">过度担心睡眠</span>
+          <span class="tag">假期作息不规律</span>
+          <span class="tag">夜间看时间</span>
+          <span class="tag">太用力入睡</span>
+        </div>
+
+        <div style="height:6px;"></div>
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">您的性格特点</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 6px;">可多选</p>
+        <div class="tag-wrap">
+          <span class="tag sel">思虑过多</span>
+          <span class="tag sel">追求完美</span>
+          <span class="tag">外向</span>
+          <span class="tag sel">敏感</span>
+          <span class="tag">要强</span>
+          <span class="tag">压抑情绪</span>
+        </div>
+
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button class="btn-s" style="flex:1;margin:0;">上一题</button>
+          <button class="btn-p" style="flex:2;margin:0;">下一题 <i class="ti ti-arrow-right" style="font-size:11px;" aria-hidden="true"></i></button>
+        </div>
+      </div>
+    </div>
+    <p class="plabel">③ 首次问卷·失眠归因</p>
+  </div>
+
+  <!-- Q4: 月度复查问卷 -->
+  <div class="phone">
+    <div class="pframe">
+      <div class="notch"><div class="pill"></div></div>
+      <div class="sbar"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="scr">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <i class="ti ti-arrow-left" style="font-size:16px;color:var(--color-text-secondary);" aria-label="返回"></i>
+            <p style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin:0;">月度睡眠改善复查</p>
+          </div>
+          <span class="badge badge-g">第 2 月</span>
+        </div>
+        <div class="prog-wrap" style="background:#C0DD97;"><div class="prog-fill" style="width:60%;background:#3B6D11;"></div></div>
+
+        <div class="notif" style="border-left-color:#1D9E75;margin-bottom:10px;">
+          <p class="nt" style="color:#085041;">ISI 失眠严重程度复测</p>
+          <p class="nb">上月得分：15分（中度失眠） · 本月变化如何？</p>
+        </div>
+
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">过去两周，入睡困难的严重程度</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 6px;">0=没有问题  4=非常严重</p>
+        <div class="scale-row">
+          <div class="scale-box">0</div>
+          <div class="scale-box">1</div>
+          <div class="scale-box sel">2</div>
+          <div class="scale-box">3</div>
+          <div class="scale-box">4</div>
+        </div>
+
+        <div style="height:6px;"></div>
+        <p style="font-size:11px;font-weight:500;color:var(--color-text-primary);margin:0 0 3px;">过去一个月，以下习惯改善情况</p>
+        <p style="font-size:9px;color:var(--color-text-secondary);margin:0 0 6px;">针对您首次评估的问题项逐一复查</p>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+          <p style="font-size:10px;color:var(--color-text-primary);margin:0;">睡前看手机习惯</p>
+          <div style="display:flex;gap:4px;">
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:#EAF3DE;color:#27500A;border:0.5px solid #97C459;cursor:pointer;">明显改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">部分改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">未改善</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);">
+          <p style="font-size:10px;color:var(--color-text-primary);margin:0;">睡前思虑过多</p>
+          <div style="display:flex;gap:4px;">
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">明显改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:#FAEEDA;color:#633806;border:0.5px solid #EF9F27;cursor:pointer;">部分改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">未改善</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;">
+          <p style="font-size:10px;color:var(--color-text-primary);margin:0;">过度担心睡眠</p>
+          <div style="display:flex;gap:4px;">
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">明显改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">部分改善</div>
+            <div style="font-size:9px;padding:3px 7px;border-radius:7px;background:#FCEBEB;color:#791F1F;border:0.5px solid #F09595;cursor:pointer;">未改善</div>
+          </div>
+        </div>
+
+        <button class="btn-p" style="margin-top:10px;">提交复查 · 查看本月报告 <i class="ti ti-arrow-right" style="font-size:11px;" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    <p class="plabel">④ 月度复查问卷</p>
+  </div>
+
+</div>

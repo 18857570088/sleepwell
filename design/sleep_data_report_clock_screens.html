@@ -1,0 +1,452 @@
+
+<style>
+  .wrap2{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;padding:1rem 0 2rem;}
+  .phone{width:230px;flex-shrink:0;}
+  .pf{background:var(--color-background-primary);border:2px solid var(--color-border-primary);border-radius:36px;overflow:hidden;}
+  .nk{background:#111;height:28px;display:flex;align-items:center;justify-content:center;}
+  .np{background:#333;width:60px;height:10px;border-radius:9px;}
+  .sb{display:flex;justify-content:space-between;padding:4px 14px;font-size:10px;color:var(--color-text-secondary);background:var(--color-background-secondary);}
+  .sc{padding:12px 14px;background:var(--color-background-primary);}
+  .tb{display:flex;justify-content:space-around;align-items:center;padding:6px 0 10px;border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);}
+  .ti{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;color:var(--color-text-tertiary);}
+  .ti.on{color:#185FA5;}
+  .ti i{font-size:18px;}
+  .pl{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-align:center;margin:8px 0 0;}
+  .c{background:var(--color-background-secondary);border-radius:12px;padding:9px 11px;margin-bottom:7px;border:0.5px solid var(--color-border-tertiary);}
+  .sl{font-size:9px;font-weight:500;color:var(--color-text-secondary);letter-spacing:.04em;margin:8px 0 4px;}
+  .mx{display:flex;gap:5px;margin-bottom:6px;}
+  .mb{flex:1;background:var(--color-background-secondary);border-radius:9px;padding:7px 6px;border:0.5px solid var(--color-border-tertiary);text-align:center;}
+  .ml{font-size:8px;color:var(--color-text-secondary);margin:0 0 2px;}
+  .mv{font-size:12px;font-weight:500;margin:0;}
+  .tabrow{display:flex;gap:5px;margin-bottom:8px;}
+  .tab{font-size:9px;padding:4px 9px;border-radius:8px;cursor:pointer;}
+  .tab.on{background:#185FA5;color:#fff;font-weight:500;}
+  .tab.off{background:var(--color-background-secondary);color:var(--color-text-secondary);}
+  .badge{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:500;}
+  .bg{background:#EAF3DE;color:#27500A;}
+  .ba{background:#FAEEDA;color:#633806;}
+  .br{background:#FCEBEB;color:#791F1F;}
+  .bb{background:#E6F1FB;color:#0C447C;}
+  .notif{background:var(--color-background-secondary);border-radius:9px;padding:8px 10px;margin-bottom:6px;}
+  .notif p{margin:0;font-size:9px;}
+  .nt{font-weight:500;color:var(--color-text-primary);margin-bottom:2px!important;}
+  .nb{color:var(--color-text-secondary);}
+  .row-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+  .row-item:last-child{border-bottom:none;}
+  .ri-l{font-size:10px;color:var(--color-text-primary);}
+  .ri-r{font-size:10px;font-weight:500;}
+  .pb{background:var(--color-background-secondary);height:4px;border-radius:2px;margin:4px 0 6px;overflow:hidden;}
+  .pf2{height:100%;border-radius:2px;}
+  .dark-bg{background:#1a2332;border-radius:16px;padding:16px 14px;margin-bottom:8px;}
+  .dark-bg p{color:#e8edf5;}
+  .clock-outer{display:flex;justify-content:center;margin:10px 0;}
+</style>
+
+<h2 class="sr-only">睡眠数据中心优化、睡眠报告和生物钟三个界面原型图</h2>
+<p style="font-size:13px;color:var(--color-text-secondary);text-align:center;margin:0 0 1.5rem;">优化/新增界面 · 数据中心、睡眠报告（参考附图）、生物钟（参考附图）</p>
+
+<div class="wrap2">
+
+  <!-- 数据中心：折线趋势 -->
+  <div class="phone">
+    <div class="pf">
+      <div class="nk"><div class="np"></div></div>
+      <div class="sb"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="sc">
+        <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 6px;">睡眠数据中心</p>
+        <div class="tabrow">
+          <div class="tab on">30天</div>
+          <div class="tab off">7天</div>
+          <div class="tab off">3个月</div>
+          <div class="tab off">全程</div>
+        </div>
+
+        <p class="sl">指标选择</p>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:#185FA5;color:#fff;cursor:pointer;">睡眠效率</div>
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">睡眠得分</div>
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">睡眠时长</div>
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">入睡潜伏</div>
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">夜醒时长</div>
+          <div style="font-size:9px;padding:3px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-secondary);cursor:pointer;">睡眠负债</div>
+        </div>
+
+        <p class="sl">睡眠效率趋势（近30天）</p>
+        <div style="position:relative;height:70px;margin-bottom:4px;" aria-label="睡眠效率30天折线图">
+          <svg width="100%" height="70" viewBox="0 0 202 70" preserveAspectRatio="none">
+            <line x1="0" y1="56" x2="202" y2="56" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3,3"/>
+            <line x1="0" y1="35" x2="202" y2="35" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3,3"/>
+            <line x1="0" y1="14" x2="202" y2="14" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3,3"/>
+            <text x="0" y="59" font-size="7" fill="#888780">70%</text>
+            <text x="0" y="38" font-size="7" fill="#888780">80%</text>
+            <text x="0" y="17" font-size="7" fill="#888780">90%</text>
+            <polyline points="18,58 36,52 54,55 72,48 90,44 108,40 126,36 144,30 162,26 180,22 198,18"
+              fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="198" cy="18" r="3" fill="#185FA5"/>
+            <text x="175" y="14" font-size="7" fill="#185FA5" font-weight="500">87%</text>
+          </svg>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;">
+            <span style="font-size:8px;color:var(--color-text-secondary);">第1天</span>
+            <span style="font-size:8px;color:var(--color-text-secondary);">第15天</span>
+            <span style="font-size:8px;color:var(--color-text-secondary);">今天</span>
+          </div>
+        </div>
+
+        <div class="mx">
+          <div class="mb"><p class="ml">起点</p><p class="mv" style="color:#D85A30;">72%</p></div>
+          <div class="mb"><p class="ml">当前</p><p class="mv" style="color:#185FA5;">87%</p></div>
+          <div class="mb"><p class="ml">提升</p><p class="mv" style="color:#1D9E75;">+15%</p></div>
+        </div>
+
+        <p class="sl">睡眠负债动态（近30天）</p>
+        <div style="position:relative;height:55px;margin-bottom:4px;" aria-label="睡眠负债折线图">
+          <svg width="100%" height="55" viewBox="0 0 202 55" preserveAspectRatio="none">
+            <line x1="0" y1="27" x2="202" y2="27" stroke="#E24B4A" stroke-width="0.5" stroke-dasharray="3,3"/>
+            <text x="0" y="25" font-size="7" fill="#E24B4A">0h</text>
+            <text x="0" y="50" font-size="7" fill="#888780">-8h</text>
+            <polyline points="18,46 36,44 54,42 72,40 90,38 108,36 126,34 144,32 162,30 180,29 198,28"
+              fill="none" stroke="#EF9F27" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="198" cy="28" r="3" fill="#EF9F27"/>
+            <text x="168" y="24" font-size="7" fill="#BA7517" font-weight="500">-1.5h</text>
+            <text x="3" y="50" font-size="7" fill="#BA7517" font-weight="500">-6.5h</text>
+          </svg>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:8px;color:var(--color-text-secondary);">第1天</span>
+            <span style="font-size:8px;color:var(--color-text-secondary);">今天</span>
+          </div>
+        </div>
+
+        <p class="sl">夜醒次数·入睡潜伏趋势</p>
+        <div style="position:relative;height:50px;" aria-label="夜醒次数和入睡潜伏折线图">
+          <svg width="100%" height="50" viewBox="0 0 202 50" preserveAspectRatio="none">
+            <polyline points="18,38 36,36 54,34 72,30 90,28 108,24 126,22 144,18 162,16 180,14 198,12"
+              fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="18,42 36,40 54,41 72,36 90,32 108,30 126,28 144,24 162,22 180,20 198,18"
+              fill="none" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="4,2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div style="display:flex;gap:10px;margin-top:2px;">
+            <span style="font-size:8px;color:#D85A30;"><span style="display:inline-block;width:12px;height:2px;background:#D85A30;vertical-align:middle;margin-right:3px;"></span>入睡潜伏</span>
+            <span style="font-size:8px;color:#7F77DD;"><span style="display:inline-block;width:12px;height:2px;background:#7F77DD;vertical-align:middle;margin-right:3px;border-top:2px dashed #7F77DD;"></span>夜醒时长</span>
+          </div>
+        </div>
+      </div>
+      <div class="tb" role="navigation" aria-label="底部导航">
+        <div class="ti"><i class="ti ti-home" aria-hidden="true"></i><span>首页</span></div>
+        <div class="ti on"><i class="ti ti-chart-line" aria-hidden="true"></i><span>数据</span></div>
+        <div class="ti"><i class="ti ti-heart-rate-monitor" aria-hidden="true"></i><span>疗愈</span></div>
+        <div class="ti"><i class="ti ti-users" aria-hidden="true"></i><span>社区</span></div>
+        <div class="ti"><i class="ti ti-user" aria-hidden="true"></i><span>我的</span></div>
+      </div>
+    </div>
+    <p class="pl">⑤ 数据中心·折线趋势</p>
+  </div>
+
+  <!-- 睡眠报告（参考附图深色风格） -->
+  <div class="phone">
+    <div class="pf">
+      <div class="nk"><div class="np"></div></div>
+      <div class="sb" style="background:#1a2332;color:#8899aa;"><span>15:42</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div style="background:#1a2332;padding:10px 14px;min-height:480px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <i class="ti ti-arrow-left" style="font-size:16px;color:#8899aa;" aria-label="返回"></i>
+          <p style="font-size:12px;font-weight:500;color:#e8edf5;margin:0;">睡眠</p>
+          <i class="ti ti-share" style="font-size:16px;color:#8899aa;" aria-label="分享"></i>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <p style="font-size:10px;color:#8899aa;margin:0;cursor:pointer;">昨天</p>
+          <p style="font-size:10px;color:#e8edf5;margin:0;font-weight:500;border-bottom:2px solid #378ADD;padding-bottom:2px;">今天</p>
+        </div>
+
+        <p style="font-size:18px;font-weight:500;color:#e8edf5;margin:0 0 4px;">善待自己</p>
+        <p style="font-size:10px;color:#8899aa;margin:0 0 10px;line-height:1.6;">你的睡眠分数低于往常。睡眠没有按计划发展时，最好的做法就温柔对待自己。一晚并不能代表整体睡眠健康，更好的夜晚依旧可期。</p>
+
+        <p style="font-size:11px;font-weight:500;color:#e8edf5;margin:0 0 8px;">相关因素</p>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">总睡眠时长</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#EF9F27;margin:0;font-weight:500;">3小时41分</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:38%;border-radius:2px;background:#EF9F27;"></div>
+        </div>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">效率</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#e8edf5;margin:0;font-weight:500;">81%</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:81%;border-radius:2px;background:#5DCAA5;"></div>
+        </div>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">睡眠安稳度</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#e8edf5;margin:0;font-weight:500;">良好</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:75%;border-radius:2px;background:#5DCAA5;"></div>
+        </div>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">快速眼动期</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#EF9F27;margin:0;font-weight:500;">57分 · 25%</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:30%;border-radius:2px;background:#EF9F27;"></div>
+        </div>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">深度睡眠</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#e8edf5;margin:0;font-weight:500;">50分 · 23%</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:55%;border-radius:2px;background:#378ADD;"></div>
+        </div>
+
+        <div class="row-item" style="border-bottom:0.5px solid #2a3a4a;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">睡眠潜伏期</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#EF9F27;margin:0;font-weight:500;">48分钟</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:25%;border-radius:2px;background:#EF9F27;"></div>
+        </div>
+
+        <div class="row-item" style="border:none;">
+          <p style="font-size:10px;color:#e8edf5;margin:0;">入睡时机</p>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <p style="font-size:10px;color:#e8edf5;margin:0;font-weight:500;">良好</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div style="background:#2a3a4a;height:4px;border-radius:2px;margin:5px 0 8px;overflow:hidden;">
+          <div style="height:100%;width:72%;border-radius:2px;background:#5DCAA5;"></div>
+        </div>
+
+        <p style="font-size:11px;font-weight:500;color:#e8edf5;margin:10px 0 8px;">主要指标</p>
+        <div style="display:flex;gap:5px;">
+          <div style="flex:1;background:#2a3a4a;border-radius:10px;padding:8px 6px;text-align:center;">
+            <p style="font-size:8px;color:#8899aa;margin:0 0 2px;">总睡眠</p>
+            <p style="font-size:12px;font-weight:500;color:#e8edf5;margin:0;">3h 41m</p>
+          </div>
+          <div style="flex:1;background:#2a3a4a;border-radius:10px;padding:8px 6px;text-align:center;">
+            <p style="font-size:8px;color:#8899aa;margin:0 0 2px;">睡眠评分</p>
+            <p style="font-size:12px;font-weight:500;color:#EF9F27;margin:0;">62</p>
+          </div>
+          <div style="flex:1;background:#2a3a4a;border-radius:10px;padding:8px 6px;text-align:center;">
+            <p style="font-size:8px;color:#8899aa;margin:0 0 2px;">睡眠负债</p>
+            <p style="font-size:12px;font-weight:500;color:#EF9F27;margin:0;">-3.2h</p>
+          </div>
+        </div>
+      </div>
+      <div style="background:#1a2332;display:flex;justify-content:space-around;align-items:center;padding:6px 0 10px;border-top:0.5px solid #2a3a4a;">
+        <i class="ti ti-walk" style="font-size:20px;color:#8899aa;" aria-label="步行"></i>
+        <i class="ti ti-moon" style="font-size:20px;color:#378ADD;border-bottom:2px solid #378ADD;padding-bottom:2px;" aria-label="睡眠"></i>
+        <i class="ti ti-flame" style="font-size:20px;color:#8899aa;" aria-label="卡路里"></i>
+        <i class="ti ti-tools-kitchen-2" style="font-size:20px;color:#8899aa;" aria-label="营养"></i>
+        <i class="ti ti-heart" style="font-size:20px;color:#8899aa;" aria-label="健康"></i>
+        <i class="ti ti-chart-area" style="font-size:20px;color:#8899aa;" aria-label="图表"></i>
+      </div>
+    </div>
+    <p class="pl">⑥ 睡眠报告（深色风格）</p>
+  </div>
+
+  <!-- 生物钟（参考附图） -->
+  <div class="phone">
+    <div class="pf">
+      <div class="nk"><div class="np"></div></div>
+      <div class="sb" style="background:#1a2332;color:#8899aa;"><span>15:42</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div style="background:#1a2332;padding:10px 14px;min-height:480px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <i class="ti ti-arrow-left" style="font-size:16px;color:#8899aa;" aria-label="返回"></i>
+          <p style="font-size:12px;font-weight:500;color:#e8edf5;margin:0;">生物钟</p>
+          <i class="ti ti-info-circle" style="font-size:16px;color:#8899aa;" aria-label="说明"></i>
+        </div>
+
+        <div class="clock-outer">
+          <svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="生物钟圆盘图，睡眠时段约凌晨3点到早上7点半">
+            <circle cx="90" cy="90" r="78" fill="none" stroke="#2a3a4a" stroke-width="12"/>
+            <circle cx="90" cy="90" r="78" fill="none" stroke="#378ADD" stroke-width="12"
+              stroke-dasharray="82 408" stroke-dashoffset="-87"
+              stroke-linecap="round"/>
+            <circle cx="90" cy="90" r="60" fill="none" stroke="#2a3a4a" stroke-width="1"/>
+            <text x="90" y="20" text-anchor="middle" font-size="10" fill="#8899aa">0</text>
+            <text x="164" y="94" text-anchor="middle" font-size="10" fill="#e8edf5" font-weight="500">3</text>
+            <text x="90" y="170" text-anchor="middle" font-size="10" fill="#8899aa">12</text>
+            <text x="18" y="94" text-anchor="middle" font-size="10" fill="#8899aa">18</text>
+            <text x="54" y="20" text-anchor="middle" font-size="10" fill="#8899aa">21</text>
+            <text x="136" y="20" text-anchor="middle" font-size="9" fill="#8899aa">3</text>
+            <text x="164" y="148" text-anchor="middle" font-size="9" fill="#e8edf5">6</text>
+            <text x="18" y="148" text-anchor="middle" font-size="9" fill="#8899aa">15</text>
+            <text x="136" y="165" text-anchor="middle" font-size="9" fill="#8899aa">9</text>
+            <circle cx="90" cy="12" r="4" fill="#e8edf5"/>
+            <circle cx="158" cy="114" r="4" fill="#378ADD"/>
+            <line x1="90" y1="90" x2="158" y2="110" stroke="#378ADD" stroke-width="1.5" stroke-dasharray="2,2"/>
+            <circle cx="90" cy="90" r="5" fill="#2a3a4a" stroke="#8899aa" stroke-width="1.5"/>
+            <rect x="148" y="104" width="24" height="16" rx="8" fill="#378ADD"/>
+            <text x="160" y="116" text-anchor="middle" font-size="9" fill="#fff">床</text>
+          </svg>
+        </div>
+
+        <div style="background:#2a3a4a;border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+          <p style="font-size:9px;color:#8899aa;margin:0 0 2px;">睡眠周期同步</p>
+          <p style="font-size:16px;font-weight:500;color:#e8edf5;margin:0 0 4px;">延后</p>
+          <p style="font-size:10px;color:#8899aa;margin:0;line-height:1.5;">你的睡眠中点比昼夜节律类型延后 1小时28分钟。</p>
+        </div>
+
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <div style="flex:1;background:#2a3a4a;border-radius:10px;padding:10px 12px;cursor:pointer;">
+            <p style="font-size:9px;color:#8899aa;margin:0 0 2px;">昼夜节律类型</p>
+            <p style="font-size:11px;font-weight:500;color:#e8edf5;margin:0;">早夜型</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+          <div style="flex:1;background:#2a3a4a;border-radius:10px;padding:10px 12px;cursor:pointer;">
+            <p style="font-size:9px;color:#8899aa;margin:0 0 2px;">睡眠规律</p>
+            <p style="font-size:11px;font-weight:500;color:#5DCAA5;margin:0;">良好</p>
+            <i class="ti ti-chevron-right" style="font-size:11px;color:#8899aa;" aria-hidden="true"></i>
+          </div>
+        </div>
+
+        <div style="background:#2a3a4a;border-radius:10px;padding:10px 12px;">
+          <p style="font-size:10px;font-weight:500;color:#e8edf5;margin:0 0 6px;">节律调整建议</p>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#378ADD;margin-top:4px;flex-shrink:0;"></div>
+            <p style="font-size:9px;color:#8899aa;margin:0;line-height:1.5;">每天早晨 7:00 进行 10 分钟户外光照，有助提前生物钟节律</p>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#378ADD;margin-top:4px;flex-shrink:0;"></div>
+            <p style="font-size:9px;color:#8899aa;margin:0;line-height:1.5;">工作日与休息日起床时间差控制在 1 小时内，减少社会时差</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="pl">⑦ 生物钟（深色风格）</p>
+  </div>
+
+  <!-- 数据中心：六项指标汇总卡 -->
+  <div class="phone">
+    <div class="pf">
+      <div class="nk"><div class="np"></div></div>
+      <div class="sb"><span>9:41</span><span><i class="ti ti-wifi" style="font-size:11px"></i></span></div>
+      <div class="sc">
+        <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 6px;">数据中心·指标详情</p>
+        <div class="tabrow">
+          <div class="tab on">7天</div>
+          <div class="tab off">30天</div>
+          <div class="tab off">全程</div>
+        </div>
+
+        <p class="sl">六项核心指标·纵向对比</p>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">睡眠效率</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#185FA5;margin:0;">87%</p>
+              <span class="badge bg">↑15%</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:87%;background:#185FA5;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">目标 ≥ 85%  · 已达标</p>
+        </div>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">睡眠评分</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#1D9E75;margin:0;">78</p>
+              <span class="badge bg">↑16分</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:78%;background:#1D9E75;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">入组时：62分</p>
+        </div>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">睡眠时长</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#185FA5;margin:0;">6h 42m</p>
+              <span class="badge bg">↑1h2m</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:70%;background:#185FA5;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">SRT处方 6.5h · 已超标</p>
+        </div>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">入睡潜伏期</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#BA7517;margin:0;">22 min</p>
+              <span class="badge ba">↓26min</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:30%;background:#EF9F27;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">入组时：48分钟 · 目标 &lt;20分</p>
+        </div>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">入睡后清醒（WASO）</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#BA7517;margin:0;">1次 · 8m</p>
+              <span class="badge ba">↓2次</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:20%;background:#EF9F27;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">入组时：3次 · 共38分钟</p>
+        </div>
+
+        <div class="c" style="padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="font-size:10px;font-weight:500;color:var(--color-text-primary);margin:0;">睡眠负债</p>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <p style="font-size:13px;font-weight:500;color:#D85A30;margin:0;">-1.5h</p>
+              <span class="badge bg">已减少5h</span>
+            </div>
+          </div>
+          <div style="background:var(--color-background-primary);height:3px;border-radius:2px;margin:6px 0 2px;overflow:hidden;">
+            <div style="height:100%;width:20%;background:#D85A30;border-radius:2px;"></div>
+          </div>
+          <p style="font-size:8px;color:var(--color-text-secondary);margin:0;">入组时：-6.5h · 目标清零</p>
+        </div>
+      </div>
+      <div class="tb" role="navigation" aria-label="底部导航">
+        <div class="ti"><i class="ti ti-home" aria-hidden="true"></i><span>首页</span></div>
+        <div class="ti on"><i class="ti ti-chart-line" aria-hidden="true"></i><span>数据</span></div>
+        <div class="ti"><i class="ti ti-heart-rate-monitor" aria-hidden="true"></i><span>疗愈</span></div>
+        <div class="ti"><i class="ti ti-users" aria-hidden="true"></i><span>社区</span></div>
+        <div class="ti"><i class="ti ti-user" aria-hidden="true"></i><span>我的</span></div>
+      </div>
+    </div>
+    <p class="pl">⑧ 数据中心·六项指标</p>
+  </div>
+
+</div>
