@@ -1,23 +1,35 @@
 ﻿package com.sleepwell.app
 
+import android.content.Context
 import android.graphics.Canvas
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.MediaController
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.VideoView
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import java.net.HttpURLConnection
 import java.net.URL
@@ -36,6 +48,14 @@ class MainActivity : AppCompatActivity() {
         Qa,
         Community,
         Profile,
+    }
+
+    private enum class ContentFilter(val label: String) {
+        All("全部"),
+        Video("视频"),
+        WatchedVideo("已看视频"),
+        Comic("漫画"),
+        WatchedComic("已看漫画"),
     }
 
     private data class SleepRecord(
@@ -61,6 +81,8 @@ class MainActivity : AppCompatActivity() {
     private data class HealthContentItem(
         val id: String,
         val type: String,
+        val categoryKey: String,
+        val categoryName: String,
         val title: String,
         val subtitle: String,
         val duration: String,
@@ -68,6 +90,14 @@ class MainActivity : AppCompatActivity() {
         val url: String,
         val tags: List<String>,
         val description: String,
+        val triggerQuestionKey: String,
+        val triggerAnswerKey: String,
+        val sortOrder: Int,
+    )
+
+    private data class HealthContentBundle(
+        val item: HealthContentItem,
+        val pages: List<HealthContentItem>,
     )
 
     private data class ApiConfig(
@@ -75,6 +105,7 @@ class MainActivity : AppCompatActivity() {
         val apiBaseUrl: String,
         val sleepRecordsEndpoint: String,
         val healthContentsEndpoint: String,
+        val contentProgressEndpoint: String,
         val deviceStatusEndpoint: String,
         val uploadEndpoint: String,
         val mode: String,
@@ -89,9 +120,15 @@ class MainActivity : AppCompatActivity() {
     private var currentPage: Page = Page.Home
     private var sleepRecords: List<SleepRecord> = emptyList()
     private var healthContents: List<HealthContentItem> = emptyList()
+    private var cloudWatchedContentIds: Set<String> = emptySet()
     private val apiConfig: ApiConfig by lazy { loadApiConfig() }
-    private var sleepDataSource: String = "本地模拟数据"
-    private var contentDataSource: String = "本地内容清单"
+    private val watchedContentPrefs by lazy { getSharedPreferences("sleepwell_watched_content", Context.MODE_PRIVATE) }
+    private var sleepDataSource: String = "云端模拟数据"
+    private var contentDataSource: String = "云端内容库"
+    private var isRemoteLoading: Boolean = true
+    private var remoteLoadError: String? = null
+    private var acceptedSleepRestrictionBedTime: String? = null
+    private var acceptedSleepRestrictionWakeTime: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,14 +159,13 @@ class MainActivity : AppCompatActivity() {
             }
         root.addView(contentHost)
         root.addView(bottomNav)
-        sleepRecords = loadMockSleepRecords()
-        healthContents = loadHealthContents()
         setContentView(root)
         showPage(Page.Home)
         refreshRemoteData()
     }
 
     private fun showPage(page: Page) {
+        setVideoFullscreen(false)
         currentPage = page
         bottomNav.visibility = View.VISIBLE
         renderContent(scrollPage(contentFor(page)))
@@ -137,10 +173,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDetail(content: View, selectedPage: Page = currentPage, hideBottom: Boolean = false) {
+        setVideoFullscreen(false)
         currentPage = selectedPage
         bottomNav.visibility = if (hideBottom) View.GONE else View.VISIBLE
         renderContent(scrollPage(content))
         if (!hideBottom) renderBottomNav()
+    }
+
+    private fun showRawDetail(content: View, selectedPage: Page = currentPage, hideBottom: Boolean = false, immersive: Boolean = false) {
+        setVideoFullscreen(immersive)
+        currentPage = selectedPage
+        bottomNav.visibility = if (hideBottom) View.GONE else View.VISIBLE
+        renderContent(content)
+        if (!hideBottom) renderBottomNav()
+    }
+
+    private fun setVideoFullscreen(enabled: Boolean) {
+        if (enabled) {
+            window.statusBarColor = Color.BLACK
+            window.navigationBarColor = Color.BLACK
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        } else {
+            window.statusBarColor = C.bgPrimary
+            window.navigationBarColor = C.bgPrimary
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            } else {
+                window.decorView.systemUiVisibility = 0
+            }
+        }
     }
 
     private fun renderContent(view: View) {
@@ -150,25 +217,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun contentFor(page: Page): LinearLayout =
         when (page) {
-            Page.Home -> homePage()
-            Page.Data -> dataCenterPage()
+            Page.Home -> if (sleepRecords.isEmpty()) cloudDataStatePage("今日睡眠报告") else homePage()
+            Page.Data -> if (sleepRecords.isEmpty()) cloudDataStatePage("睡眠数据中心") else dataCenterPage()
             Page.Heal -> healingCenterPage()
             Page.Qa -> qaPage()
             Page.Community -> communityPage()
             Page.Profile -> profilePage()
         }
-
-    private fun loadMockSleepRecords(): List<SleepRecord> {
-        val json = assets.open("mock_sleep_7days.json").bufferedReader().use { it.readText() }
-        val array = JSONArray(json)
-        return parseSleepRecords(array)
-    }
-
-    private fun loadHealthContents(): List<HealthContentItem> {
-        val json = assets.open("health_content_manifest.json").bufferedReader().use { it.readText() }
-        val array = JSONArray(json)
-        return parseHealthContents(array)
-    }
 
     private fun loadApiConfig(): ApiConfig {
         val json = assets.open("server_config.json").bufferedReader().use { it.readText() }
@@ -178,9 +233,10 @@ class MainActivity : AppCompatActivity() {
             apiBaseUrl = item.optString("apiBaseUrl"),
             sleepRecordsEndpoint = item.optString("sleepRecordsEndpoint", "/v1/sleep-records?days=7&user_id=demo"),
             healthContentsEndpoint = item.optString("healthContentsEndpoint", "/v1/health-contents"),
+            contentProgressEndpoint = item.optString("contentProgressEndpoint", "/v1/content-progress?user_id=demo"),
             deviceStatusEndpoint = item.optString("deviceStatusEndpoint", "/v1/device/status?user_id=demo"),
             uploadEndpoint = item.optString("uploadEndpoint", "/v1/uploads"),
-            mode = item.optString("mode", "cloud-with-local-fallback"),
+            mode = item.optString("mode", "cloud-only"),
         )
     }
 
@@ -215,6 +271,8 @@ class MainActivity : AppCompatActivity() {
             HealthContentItem(
                 id = item.getString("id"),
                 type = item.getString("type"),
+                categoryKey = item.optString("categoryKey"),
+                categoryName = item.optString("categoryName"),
                 title = item.getString("title"),
                 subtitle = item.getString("subtitle"),
                 duration = item.getString("duration"),
@@ -222,33 +280,68 @@ class MainActivity : AppCompatActivity() {
                 url = item.getString("url"),
                 tags = (0 until tagsArray.length()).map { tagsArray.getString(it) },
                 description = item.getString("description"),
+                triggerQuestionKey = item.optString("triggerQuestionKey"),
+                triggerAnswerKey = item.optString("triggerAnswerKey"),
+                sortOrder = item.optInt("sortOrder", index),
             )
         }
 
+    private fun parseWatchedContentIds(root: JSONObject): Set<String> {
+        val data = root.optJSONObject("data") ?: return emptySet()
+        val array = data.optJSONArray("watchedContentIds") ?: JSONArray()
+        return (0 until array.length()).mapNotNull { index ->
+            array.optString(index).takeIf { it.isNotBlank() }
+        }.toSet()
+    }
+
     private fun refreshRemoteData() {
         val config = apiConfig
-        if (!config.enabled || config.apiBaseUrl.isBlank()) return
+        if (!config.enabled || config.apiBaseUrl.isBlank()) {
+            isRemoteLoading = false
+            remoteLoadError = "云端接口未启用"
+            showPage(currentPage)
+            return
+        }
+        isRemoteLoading = true
+        remoteLoadError = null
         Thread {
+            var errorMessage: String? = null
             val remoteSleepRecords = runCatching {
                 val root = JSONObject(httpGet(config.url(config.sleepRecordsEndpoint)))
                 parseSleepRecords(root.getJSONArray("data"))
-            }.getOrNull()
+            }.onFailure { errorMessage = "睡眠数据接口：${it.message ?: it.javaClass.simpleName}" }.getOrNull()
             val remoteHealthContents = runCatching {
                 val root = JSONObject(httpGet(config.url(config.healthContentsEndpoint)))
                 parseHealthContents(root.getJSONArray("data"))
+            }.onFailure {
+                if (errorMessage == null) errorMessage = "内容接口：${it.message ?: it.javaClass.simpleName}"
             }.getOrNull()
-            if (!remoteSleepRecords.isNullOrEmpty() || !remoteHealthContents.isNullOrEmpty()) {
-                runOnUiThread {
-                    if (!remoteSleepRecords.isNullOrEmpty()) {
-                        sleepRecords = remoteSleepRecords
-                        sleepDataSource = "云端接口"
-                    }
-                    if (!remoteHealthContents.isNullOrEmpty()) {
-                        healthContents = remoteHealthContents
-                        contentDataSource = "云端接口"
-                    }
-                    showPage(currentPage)
+            val remoteWatchedIds = runCatching {
+                val root = JSONObject(httpGet(config.url(config.contentProgressEndpoint)))
+                parseWatchedContentIds(root)
+            }.getOrNull()
+            runOnUiThread {
+                isRemoteLoading = false
+                if (!remoteSleepRecords.isNullOrEmpty()) {
+                    sleepRecords = remoteSleepRecords
+                    sleepDataSource = "云端模拟数据"
                 }
+                if (remoteHealthContents != null) {
+                    healthContents = remoteHealthContents
+                    contentDataSource = "云端已上传内容"
+                }
+                if (remoteWatchedIds != null) {
+                    cloudWatchedContentIds = remoteWatchedIds
+                }
+                migrateLegacyWatchedFlags(contentBundles())
+                syncPendingWatchedContentIds()
+                remoteLoadError =
+                    if (sleepRecords.isEmpty()) {
+                        errorMessage ?: "云端未返回 7 天睡眠数据"
+                    } else {
+                        null
+                    }
+                showPage(currentPage)
             }
         }.start()
     }
@@ -267,17 +360,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun httpPostJson(rawUrl: String, payload: JSONObject): String {
+        val connection = URL(rawUrl).openConnection() as HttpURLConnection
+        connection.connectTimeout = 5000
+        connection.readTimeout = 5000
+        connection.requestMethod = "POST"
+        connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+        connection.doOutput = true
+        return try {
+            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) error("HTTP $code $body")
+            body
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun latestSleepRecord(): SleepRecord = sleepRecords.last()
 
     private fun previousSleepRecord(): SleepRecord = sleepRecords.getOrElse(sleepRecords.lastIndex - 1) { latestSleepRecord() }
-
-    private fun assetExists(path: String): Boolean =
-        try {
-            assets.open(path).close()
-            true
-        } catch (_: Exception) {
-            false
-        }
 
     private fun averageInt(selector: (SleepRecord) -> Int): Int =
         sleepRecords.map(selector).average().roundToInt()
@@ -356,6 +460,29 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(18), dp(14), dp(18), dp(18))
         }
 
+    private fun cloudDataStatePage(pageTitle: String): LinearLayout =
+        screen().apply {
+            val config = apiConfig
+            addView(title(pageTitle, 22f))
+            addView(
+                card("#E6F1FB", null).apply {
+                    addView(row(Gravity.CENTER_VERTICAL).apply {
+                        addView(iconCircle("wifi", "#FFFFFF", "#185FA5", 42))
+                        addView(column().apply {
+                            layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
+                            setPadding(dp(10), 0, 0, 0)
+                            addView(body(if (isRemoteLoading) "正在读取云端模拟数据" else "云端数据未就绪", 16f, "#0C447C", true))
+                            addView(small(config.apiBaseUrl, "#0C447C"))
+                        })
+                    })
+                    addView(progress(if (isRemoteLoading) 0.42f else 0.18f, if (isRemoteLoading) "#185FA5" else "#EF9F27", "#B5D4F4"))
+                    addView(small(if (isRemoteLoading) "已取消本地 7 天模拟数据，正在从云端获取睡眠记录。" else (remoteLoadError ?: "请检查云端服务状态。"), "#0C447C"))
+                },
+            )
+            addView(notification("info-circle", "数据源说明", "当前版本不再打包本地睡眠 JSON、本地视频清单或漫画清单；APP 数据统一来自云端接口。", "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
+            addView(textButton("重新加载云端数据", null) { refreshRemoteData() })
+        }
+
     private fun homePage(): LinearLayout =
         screen().apply {
             val latest = latestSleepRecord()
@@ -363,6 +490,7 @@ class MainActivity : AppCompatActivity() {
             val scoreDelta = latest.score - previous.score
             val deepPercent = percent(latest.deepSleepMinutes, latest.totalSleepMinutes)
             val remPercent = percent(latest.remSleepMinutes, latest.totalSleepMinutes)
+            val todayCourse = healthContents.firstOrNull { it.type == "video" && isUploadedContent(it) }
 
             addView(
                 row(Gravity.CENTER_VERTICAL).apply {
@@ -414,7 +542,17 @@ class MainActivity : AppCompatActivity() {
                 metricBox("REM比例", "$remPercent%", "#1D9E75", minHeightDp = 82),
                 metricBox("夜醒次数", latest.awakenings.toString(), minHeightDp = 82),
             ))
-            addView(notification("bulb", "今日建议", "今晚 ${latest.bedTime} 上床（睡眠时间限制处方）· ${latest.wakeTime} 起床", "#185FA5"))
+            addView(nativeMenu("video", "#FAEEDA", "#854F0B", "今日课程", todayCourse?.let { "${it.title} · ${it.duration}" } ?: "正在加载云端课程", "新", onClick = {
+                showDetail(contentCenterPage(Page.Home), Page.Home)
+            }))
+            val recommendedBedTime = acceptedSleepRestrictionBedTime ?: latest.bedTime
+            val recommendedWakeTime = acceptedSleepRestrictionWakeTime ?: latest.wakeTime
+            val suggestionStatus = if (acceptedSleepRestrictionBedTime == null) "睡眠时间限制建议" else "已接受睡眠时间限制建议"
+            addView(notification("bulb", "今日建议", "今晚 $recommendedBedTime 上床（$suggestionStatus）· $recommendedWakeTime 起床", "#185FA5").apply {
+                addView(surveyButton("接受建议", true) {
+                    showDetail(sleepRestrictionAcceptPage(latest.bedTime, latest.wakeTime), Page.Home)
+                })
+            })
             addView(
                 actionStrip(
                     listOf(
@@ -423,6 +561,62 @@ class MainActivity : AppCompatActivity() {
                     ),
                 ),
             )
+        }
+
+    private fun sleepRestrictionAcceptPage(prescribedBedTime: String, prescribedWakeTime: String): LinearLayout =
+        screen().apply {
+            var selectedBedTime = acceptedSleepRestrictionBedTime ?: prescribedBedTime
+            var selectedWakeTime = acceptedSleepRestrictionWakeTime ?: prescribedWakeTime
+            addView(backHeader("接受建议") { showPage(Page.Home) })
+            addView(notification(
+                "clock-hour-3",
+                "睡眠时间限制确认",
+                "您可以在建议时间前后 30 分钟内调整。确认后，系统将与睡眠监测垫回传的实际上床、起床时间进行比对。",
+                "#185FA5",
+                "#E6F1FB",
+                "#0C447C",
+                "#0C447C",
+            ))
+            addView(timeAdjuster("上床时间", prescribedBedTime, selectedBedTime, "#185FA5") { selectedBedTime = it })
+            addView(timeAdjuster("起床时间", prescribedWakeTime, selectedWakeTime, "#1D9E75") { selectedWakeTime = it })
+            addView(surveyButton("确认", true) {
+                acceptedSleepRestrictionBedTime = selectedBedTime
+                acceptedSleepRestrictionWakeTime = selectedWakeTime
+                showDetail(sleepRestrictionAcceptedPage(selectedBedTime, selectedWakeTime), Page.Home)
+            })
+        }
+
+    private fun sleepRestrictionAcceptedPage(bedTime: String, wakeTime: String): LinearLayout =
+        screen().apply {
+            addView(backHeader("时间限制已确认") { showPage(Page.Home) })
+            addView(
+                card("#EAF3DE", null).apply {
+                    addView(row(Gravity.CENTER_VERTICAL).apply {
+                        addView(iconCircle("shield-check", "#FFFFFF", "#1D9E75", 42))
+                        addView(column().apply {
+                            layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
+                            setPadding(dp(10), 0, 0, 0)
+                            addView(body("已接受今日睡眠建议", 17f, "#27500A", true))
+                            addView(small("今晚 $bedTime 上床 · 明早 $wakeTime 起床", "#27500A"))
+                        })
+                    })
+                },
+            )
+            addView(notification(
+                "device-watch",
+                "后续比对逻辑",
+                "睡眠监测垫返回数据后，将用实际入床、离床时间与本次确认时间比对，判断是否完成睡眠时间限制。",
+                "#1D9E75",
+                "#EAF3DE",
+                "#085041",
+                "#085041",
+            ))
+            addView(surveyFooterButtons(
+                previousText = "继续调整",
+                nextText = "返回首页",
+                onPrevious = { showDetail(sleepRestrictionAcceptPage(latestSleepRecord().bedTime, latestSleepRecord().wakeTime), Page.Home) },
+                onNext = { showPage(Page.Home) },
+            ))
         }
 
     private fun dataCenterPage(): LinearLayout =
@@ -563,9 +757,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun healingCenterPage(): LinearLayout =
         screen().apply {
-            val todayCourse = healthContents.firstOrNull { it.type == "video" }
-            val videoCount = healthContents.count { it.type == "video" }
-            val comicCount = healthContents.count { it.type == "comic" }
+            val bundles = contentBundles()
+            val todayCourse = bundles.firstOrNull { it.item.type == "video" }?.item
+            val videoCount = bundles.count { it.item.type == "video" }
+            val comicCount = bundles.count { it.item.type == "comic" }
             addView(title("疗愈中心", 22f))
             addView(
                 card("#E6F1FB", null).apply {
@@ -580,10 +775,10 @@ class MainActivity : AppCompatActivity() {
             addView(nativeMenu("brain", "#FAEEDA", "#854F0B", "认知重构", "识别并纠正睡眠认知扭曲"))
             addView(nativeMenu("activity", "#E1F5EE", "#0F6E56", "放松训练", "PMR · 4-7-8 呼吸 · 正念冥想"))
             addView(sectionLabel("睡眠卫生教育"))
-            addView(nativeMenu("video", "#FAEEDA", "#854F0B", "今日课程", todayCourse?.let { "${it.title} · ${it.duration}" } ?: "暂无本地课程", "新", onClick = {
+            addView(nativeMenu("video", "#FAEEDA", "#854F0B", "今日课程", todayCourse?.let { "${it.title} · ${it.duration}" } ?: "暂无已上传视频", "新", onClick = {
                 showDetail(contentCenterPage(Page.Heal), Page.Heal)
             }))
-            addView(nativeMenu("book", "#FCEBEB", "#793434", "健康教育内容中心", "${videoCount}个视频 · ${comicCount}个漫画 · 本地清单", null, onClick = {
+            addView(nativeMenu("book", "#FCEBEB", "#793434", "健康教育内容中心", "${videoCount}个视频 · ${comicCount}个漫画 · 已上传素材", null, onClick = {
                 showDetail(contentCenterPage(Page.Heal), Page.Heal)
             }))
             addView(sectionLabel("工具"))
@@ -591,13 +786,17 @@ class MainActivity : AppCompatActivity() {
             addView(nativeMenu("trending-up", "#EAF3DE", "#3B6D11", "疗愈效果报告", "ISI 趋势、依从性与待改善项", null, onClick = { showDetail(therapyReportPage(), Page.Heal) }))
         }
 
-    private fun contentCenterPage(backPage: Page = Page.Heal): LinearLayout =
+    private fun contentCenterPage(backPage: Page = Page.Heal, activeFilter: ContentFilter = ContentFilter.All): LinearLayout =
         screen().apply {
-            val videoCount = healthContents.count { it.type == "video" }
-            val comicCount = healthContents.count { it.type == "comic" }
-            val readyCount = healthContents.count { assetExists(it.url) }
+            val bundles = contentBundles()
+            migrateLegacyWatchedFlags(bundles)
+            val visibleBundles = filteredContentBundles(bundles, activeFilter)
+            val videoCount = bundles.count { it.item.type == "video" }
+            val comicCount = bundles.count { it.item.type == "comic" }
+            val watchedVideoCount = bundles.count { it.item.type == "video" && isContentWatched(it) }
+            val watchedComicCount = bundles.count { it.item.type == "comic" && isContentWatched(it) }
             addView(backHeader("健康教育内容中心") { showPage(backPage) })
-            addView(label("读取本地视频 / 漫画清单"))
+            addView(label("展示云端已上传视频 / 漫画"))
             addView(
                 card("#E6F1FB", null).apply {
                     addView(row(Gravity.CENTER_VERTICAL).apply {
@@ -605,42 +804,53 @@ class MainActivity : AppCompatActivity() {
                         addView(column().apply {
                             layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
                             setPadding(dp(10), 0, dp(6), 0)
-                            addView(body("本地内容库", 16f, "#0C447C", true))
-                            addView(small("assets/health_content_manifest.json", "#0C447C"))
+                            addView(body("云端已上传内容库", 16f, "#0C447C", true))
+                            addView(small(apiConfig.url(apiConfig.healthContentsEndpoint), "#0C447C"))
                         })
-                        addView(badge("${healthContents.size}项", "#185FA5", "#FFFFFF"))
+                        addView(badge("${bundles.size}项", "#185FA5", "#FFFFFF"))
                     })
                     addView(metricRow(
-                        metricBox("视频", "${videoCount}个", "#185FA5"),
-                        metricBox("漫画", "${comicCount}个", "#793434"),
-                        metricBox("素材就绪", "${readyCount}个", if (readyCount == healthContents.size) "#1D9E75" else "#BA7517"),
+                        metricBox("未看视频", "${videoCount - watchedVideoCount}个", "#185FA5"),
+                        metricBox("未看漫画", "${comicCount - watchedComicCount}个", "#793434"),
+                        metricBox("已看", "${watchedVideoCount + watchedComicCount}个", "#1D9E75"),
                     ))
                 },
             )
-            addView(tabRow(listOf("全部" to true, "视频" to false, "漫画" to false)))
-            healthContents.forEach { item ->
-                addView(contentItemCard(item, backPage))
+            addView(contentFilterTabs(activeFilter, backPage))
+            if (visibleBundles.isEmpty()) {
+                addView(notification("info-circle", emptyContentTitle(activeFilter), emptyContentMessage(activeFilter), "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
+            }
+            visibleBundles.forEach { bundle ->
+                addView(contentItemCard(bundle, backPage, activeFilter))
             }
         }
 
-    private fun contentItemCard(item: HealthContentItem, backPage: Page): LinearLayout =
+    private fun contentItemCard(bundle: HealthContentBundle, backPage: Page, activeFilter: ContentFilter): LinearLayout =
         card().apply {
+            val item = bundle.item
+            val watched = isContentWatched(bundle)
             isClickable = true
-            setOnClickListener { showDetail(contentDetailPage(item, backPage), backPage) }
+            setOnClickListener {
+                markContentWatched(bundle)
+                if (item.type == "video") {
+                    showRawDetail(videoFullscreenPage(item, backPage, activeFilter), backPage, hideBottom = true, immersive = true)
+                } else {
+                    showDetail(contentDetailPage(bundle, backPage, activeFilter), backPage)
+                }
+            }
             addView(row(Gravity.CENTER_VERTICAL).apply {
-                addView(iconCircle(contentTypeIcon(item), contentTypeFill(item), contentTypeColor(item), 42))
+                addView(cloudImage(item.cover.ifBlank { item.url }, widthDp = 74, heightDp = 74))
                 addView(column().apply {
                     layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
-                    setPadding(dp(10), 0, dp(8), 0)
-                    addView(body(item.title, 15f, "#25231E", true))
-                    addView(small("${item.subtitle} · ${item.duration}"))
+                    addView(body(bundleTitle(bundle), 15f, "#25231E", true))
+                    addView(small("${item.categoryName.ifBlank { item.categoryKey }} · ${bundleDuration(bundle)}"))
                 })
-                addView(badge(contentTypeLabel(item), contentTypeFill(item), contentTypeColor(item)))
+                addView(badge(contentWatchLabel(item, watched), if (watched) "#EAF3DE" else contentTypeFill(item), if (watched) "#27500A" else contentTypeColor(item)))
             })
             addView(body(item.description, 13f, "#65635C").apply { setPadding(0, dp(8), 0, dp(8)) })
             addView(row(Gravity.CENTER_VERTICAL).apply {
-                addView(badge(if (assetExists(item.url)) "素材已就绪" else "待放入素材", if (assetExists(item.url)) "#EAF3DE" else "#FAEEDA", if (assetExists(item.url)) "#27500A" else "#854F0B"))
-                addView(small(item.url).apply {
+                addView(badge(item.triggerQuestionKey.ifBlank { "云端内容" }, "#EAF3DE", "#27500A"))
+                addView(small(item.triggerAnswerKey.ifBlank { item.url }).apply {
                     layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
                     setPadding(dp(8), 0, 0, 0)
                 })
@@ -652,10 +862,11 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
-    private fun contentDetailPage(item: HealthContentItem, backPage: Page): LinearLayout =
+    private fun contentDetailPage(bundle: HealthContentBundle, backPage: Page, activeFilter: ContentFilter): LinearLayout =
         screen().apply {
-            val ready = assetExists(item.url)
-            addView(backHeader(item.title) { showDetail(contentCenterPage(backPage), backPage) })
+            val item = bundle.item
+            addView(backHeader(bundleTitle(bundle)) { showDetail(contentCenterPage(backPage, activeFilter), backPage) })
+            addView(comicViewerCard(bundle))
             addView(
                 card(if (item.type == "video") "#FAEEDA" else "#FCEBEB", null).apply {
                     addView(row(Gravity.CENTER_VERTICAL).apply {
@@ -665,9 +876,9 @@ class MainActivity : AppCompatActivity() {
                             setPadding(dp(10), 0, dp(8), 0)
                             addView(body(contentTypeLabel(item), 13f, contentTypeColor(item), true))
                             addView(body(item.subtitle, 16f, "#25231E", true))
-                            addView(small("时长：${item.duration}"))
+                            addView(small(if (item.type == "comic") "页数：${bundle.pages.size}页" else "时长：${item.duration}"))
                         })
-                        addView(badge(if (ready) "可测试" else "清单占位", if (ready) "#EAF3DE" else "#F2F0EA", if (ready) "#27500A" else "#65635C"))
+                        addView(badge("云端下发", "#EAF3DE", "#27500A"))
                     })
                 },
             )
@@ -679,15 +890,338 @@ class MainActivity : AppCompatActivity() {
                     item.tags.forEach { addView(tag(it, "#E6F1FB", "#0C447C")) }
                 })
             })
-            addView(sectionLabel("本地素材路径"))
-            addView(card().apply {
-                addView(body("封面", 13f, "#65635C", true))
-                addView(small(item.cover))
-                addView(body("内容文件", 13f, "#65635C", true).apply { setPadding(0, dp(8), 0, 0) })
-                addView(small(item.url))
-            })
-            addView(notification("info-circle", "调试提示", "当前阶段先读取本地清单；将真实视频或漫画 JSON 放入对应 assets 路径后，可继续接入播放器与漫画阅读器。", "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
         }
+
+    private fun isUploadedContent(item: HealthContentItem): Boolean =
+        item.url.contains("/media/") || item.cover.contains("/media/")
+
+    private fun filteredContentBundles(bundles: List<HealthContentBundle>, activeFilter: ContentFilter): List<HealthContentBundle> =
+        when (activeFilter) {
+            ContentFilter.All -> bundles
+            ContentFilter.Video -> bundles.filter { it.item.type == "video" && !isContentWatched(it) }
+            ContentFilter.WatchedVideo -> bundles.filter { it.item.type == "video" && isContentWatched(it) }
+            ContentFilter.Comic -> bundles.filter { it.item.type == "comic" && !isContentWatched(it) }
+            ContentFilter.WatchedComic -> bundles.filter { it.item.type == "comic" && isContentWatched(it) }
+        }
+
+    private fun contentFilterTabs(activeFilter: ContentFilter, backPage: Page): HorizontalScrollView =
+        HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(row().apply {
+                ContentFilter.values().forEach { filter ->
+                    addView(chip(filter.label, filter == activeFilter).apply {
+                        isClickable = true
+                        setOnClickListener { showDetail(contentCenterPage(backPage, filter), backPage) }
+                    })
+                }
+            })
+        }
+
+    private fun contentWatchKey(bundle: HealthContentBundle): String =
+        if (bundle.item.type == "comic") {
+            "comic:${bundle.pages.joinToString("|") { it.id }}"
+        } else {
+            "video:${bundle.item.id}"
+        }
+
+    private fun contentIds(bundle: HealthContentBundle): List<String> =
+        if (bundle.item.type == "comic") bundle.pages.map { it.id } else listOf(bundle.item.id)
+
+    private fun isContentWatched(bundle: HealthContentBundle): Boolean =
+        contentIds(bundle).all { it in cloudWatchedContentIds || it in localWatchedContentIds() } ||
+            watchedContentPrefs.getBoolean(contentWatchKey(bundle), false)
+
+    private fun markContentWatched(bundle: HealthContentBundle) {
+        val ids = contentIds(bundle)
+        saveLocalWatchedContentIds(ids)
+        watchedContentPrefs.edit().putBoolean(contentWatchKey(bundle), true).apply()
+        syncWatchedContentIds(ids)
+    }
+
+    private fun migrateLegacyWatchedFlags(bundles: List<HealthContentBundle>) {
+        val legacyIds =
+            bundles
+                .filter { watchedContentPrefs.getBoolean(contentWatchKey(it), false) }
+                .flatMap { contentIds(it) }
+                .filter { it !in localWatchedContentIds() }
+        if (legacyIds.isNotEmpty()) {
+            saveLocalWatchedContentIds(legacyIds)
+            syncWatchedContentIds(legacyIds)
+        }
+    }
+
+    private fun localWatchedContentIds(): Set<String> =
+        watchedContentPrefs.getStringSet("watched_content_ids", emptySet()).orEmpty().toSet()
+
+    private fun saveLocalWatchedContentIds(ids: Collection<String>) {
+        val merged = localWatchedContentIds().toMutableSet()
+        merged.addAll(ids.filter { it.isNotBlank() })
+        watchedContentPrefs.edit().putStringSet("watched_content_ids", merged).apply()
+    }
+
+    private fun syncPendingWatchedContentIds() {
+        val pendingIds = localWatchedContentIds().filter { it !in cloudWatchedContentIds }
+        if (pendingIds.isNotEmpty()) syncWatchedContentIds(pendingIds)
+    }
+
+    private fun syncWatchedContentIds(ids: Collection<String>) {
+        val contentIds = ids.filter { it.isNotBlank() }.distinct()
+        if (contentIds.isEmpty() || !apiConfig.enabled || apiConfig.apiBaseUrl.isBlank()) return
+        Thread {
+            val success = runCatching {
+                val payload =
+                    JSONObject()
+                        .put("userId", contentProgressUserId())
+                        .put("contentIds", JSONArray(contentIds))
+                        .put("progressPercent", 100)
+                        .put("completed", true)
+                httpPostJson(apiConfig.url(contentProgressPostEndpoint()), payload)
+            }.isSuccess
+            if (success) {
+                runOnUiThread {
+                    cloudWatchedContentIds = cloudWatchedContentIds + contentIds
+                }
+            }
+        }.start()
+    }
+
+    private fun contentProgressUserId(): String =
+        Regex("[?&]user_id=([^&]+)")
+            .find(apiConfig.contentProgressEndpoint)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.let { Uri.decode(it) }
+            ?.takeIf { it.isNotBlank() }
+            ?: "demo"
+
+    private fun contentProgressPostEndpoint(): String =
+        apiConfig.contentProgressEndpoint.substringBefore("?").ifBlank { "/v1/content-progress" }
+
+    private fun contentWatchLabel(item: HealthContentItem, watched: Boolean): String =
+        when {
+            watched && item.type == "video" -> "已看视频"
+            watched -> "已看漫画"
+            item.type == "video" -> "未看视频"
+            else -> "未看漫画"
+        }
+
+    private fun emptyContentTitle(activeFilter: ContentFilter): String =
+        when (activeFilter) {
+            ContentFilter.All -> "暂无已上传内容"
+            ContentFilter.Video -> "暂无未看视频"
+            ContentFilter.WatchedVideo -> "暂无已看视频"
+            ContentFilter.Comic -> "暂无未看漫画"
+            ContentFilter.WatchedComic -> "暂无已看漫画"
+        }
+
+    private fun emptyContentMessage(activeFilter: ContentFilter): String =
+        when (activeFilter) {
+            ContentFilter.All -> remoteLoadError ?: "请先在 Sleepwell 内容上传工具中上传视频或漫画素材。"
+            ContentFilter.Video -> "所有视频都已观看，或当前云端暂无视频素材。"
+            ContentFilter.WatchedVideo -> "打开并播放视频后，会自动归入这里。"
+            ContentFilter.Comic -> "所有漫画都已观看，或当前云端暂无漫画素材。"
+            ContentFilter.WatchedComic -> "打开漫画详情后，会自动归入这里。"
+        }
+
+    private fun contentBundles(): List<HealthContentBundle> {
+        val uploadedContents = healthContents.filter { isUploadedContent(it) }
+        val videos =
+            uploadedContents
+                .filter { it.type == "video" }
+                .sortedBy { it.sortOrder }
+                .map { HealthContentBundle(it, listOf(it)) }
+        val comics =
+            uploadedContents
+                .filter { it.type == "comic" }
+                .groupBy { comicGroupKey(it) }
+                .values
+                .mapNotNull { pages ->
+                    val sorted =
+                        pages.sortedWith(
+                            compareBy<HealthContentItem> { it.sortOrder }
+                                .thenBy { comicPageIndex(it) },
+                        )
+                    sorted.firstOrNull()?.let { HealthContentBundle(it, sorted) }
+                }
+                .sortedBy { it.item.sortOrder }
+        return (videos + comics).sortedBy { it.item.sortOrder }
+    }
+
+    private fun comicGroupKey(item: HealthContentItem): String =
+        listOf(
+            item.categoryKey,
+            item.triggerQuestionKey,
+            item.triggerAnswerKey,
+            comicBaseTitle(item.title),
+        ).joinToString("|")
+
+    private fun comicBaseTitle(title: String): String =
+        title
+            .replace(Regex("（第\\d+页）$"), "")
+            .replace(Regex("\\(第\\d+页\\)$"), "")
+            .trim()
+
+    private fun comicPageIndex(item: HealthContentItem): Int =
+        Regex("第(\\d+)页").find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: item.sortOrder
+
+    private fun bundleTitle(bundle: HealthContentBundle): String =
+        if (bundle.item.type == "comic" && bundle.pages.size > 1) comicBaseTitle(bundle.item.title) else bundle.item.title
+
+    private fun bundleDuration(bundle: HealthContentBundle): String =
+        if (bundle.item.type == "comic") "${bundle.pages.size}页" else bundle.item.duration
+
+    private fun videoFullscreenPage(item: HealthContentItem, backPage: Page, activeFilter: ContentFilter): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(match, match)
+            setBackgroundColor(Color.BLACK)
+            setPadding(dp(12), dp(10), dp(12), dp(14))
+            addView(row(Gravity.CENTER_VERTICAL).apply {
+                addView(backButton("#FFFFFF") { showDetail(contentCenterPage(backPage, activeFilter), backPage) })
+                addView(body(bundleTitle(HealthContentBundle(item, listOf(item))), 16f, "#FFFFFF", true).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
+                    maxLines = 2
+                })
+                addView(iconCircle("video", "#1F2937", "#DCEBFF", 38))
+            })
+            val videoUrl = mediaUrl(item.url)
+            val posterUrl = item.cover.takeIf { it.isNotBlank() }?.let { mediaUrl(it) }.orEmpty()
+            val webView =
+                WebView(this@MainActivity).apply {
+                    layoutParams = LinearLayout.LayoutParams(match, 0, 1f).apply {
+                        topMargin = dp(10)
+                        bottomMargin = dp(8)
+                    }
+                    setBackgroundColor(Color.BLACK)
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    webViewClient = WebViewClient()
+                    webChromeClient = WebChromeClient()
+                    settings.javaScriptEnabled = false
+                    settings.domStorageEnabled = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    settings.loadsImagesAutomatically = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    loadDataWithBaseURL(
+                        videoUrl.substringBeforeLast('/') + "/",
+                        videoHtml(videoUrl, posterUrl, item.title),
+                        "text/html",
+                        "UTF-8",
+                        null,
+                    )
+                }
+            addView(webView)
+            addView(small("${item.categoryName.ifBlank { item.categoryKey }} · ${item.duration}", "#DCEBFF").apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(4), 0, 0)
+            })
+        }
+
+    private fun videoHtml(videoUrl: String, posterUrl: String, title: String): String {
+        val poster = if (posterUrl.isBlank()) "" else " poster=\"${htmlEscape(posterUrl)}\""
+        return """
+            <!doctype html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+              <style>
+                html, body {
+                  margin: 0;
+                  width: 100%;
+                  height: 100%;
+                  background: #000;
+                  overflow: hidden;
+                }
+                video {
+                  width: 100%;
+                  height: 100vh;
+                  background: #000;
+                  object-fit: contain;
+                }
+              </style>
+            </head>
+            <body>
+              <video controls autoplay playsinline preload="auto"$poster title="${htmlEscape(title)}">
+                <source src="${htmlEscape(videoUrl)}" type="video/mp4">
+              </video>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun htmlEscape(value: String): String =
+        value
+            .replace("&", "&amp;")
+            .replace("\"", "&quot;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+
+    private fun videoPlayerCard(item: HealthContentItem): LinearLayout =
+        card("#111827", null).apply {
+            addView(body("视频播放", 13f, "#DCEBFF", true).apply { setPadding(0, 0, 0, dp(8)) })
+            val videoView = VideoView(this@MainActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(match, dp(210))
+                setVideoURI(Uri.parse(mediaUrl(item.url)))
+                val controller = MediaController(this@MainActivity)
+                controller.setAnchorView(this)
+                setMediaController(controller)
+                setOnPreparedListener { seekTo(1) }
+            }
+            addView(videoView)
+            addView(surveyButton("播放视频", true) { videoView.start() }.apply {
+                background = solid(Color.parseColor("#185FA5"), Color.TRANSPARENT, 10)
+            })
+        }
+
+    private fun comicViewerCard(bundle: HealthContentBundle): LinearLayout =
+        card("#FCEBEB", null).apply {
+            addView(body("漫画查看 · 共 ${bundle.pages.size} 页", 13f, "#793434", true).apply { setPadding(0, 0, 0, dp(8)) })
+            bundle.pages.forEachIndexed { index, page ->
+                addView(body("第 ${index + 1} 页", 13f, "#793434", true).apply {
+                    setPadding(0, if (index == 0) 0 else dp(10), 0, dp(6))
+                })
+                addView(cloudImage(page.url.ifBlank { page.cover }, heightDp = 430, fitCenter = true).apply {
+                    background = solid(Color.WHITE, C.borderTertiary, 10)
+                })
+            }
+        }
+
+    private fun cloudImage(path: String, widthDp: Int? = null, heightDp: Int = 120, fitCenter: Boolean = false): ImageView =
+        ImageView(this).apply {
+            background = solid(C.bgSecondary, C.borderTertiary, 10)
+            scaleType = if (fitCenter) ImageView.ScaleType.FIT_CENTER else ImageView.ScaleType.CENTER_CROP
+            adjustViewBounds = fitCenter
+            layoutParams = LinearLayout.LayoutParams(widthDp?.let { dp(it) } ?: match, dp(heightDp)).apply {
+                if (widthDp != null) rightMargin = dp(10)
+                bottomMargin = dp(8)
+            }
+            if (path.isNotBlank()) loadCloudImage(path, this)
+        }
+
+    private fun loadCloudImage(path: String, target: ImageView) {
+        val source = mediaUrl(path)
+        Thread {
+            val bitmap = runCatching {
+                val connection = URL(source).openConnection() as HttpURLConnection
+                connection.connectTimeout = 8000
+                connection.readTimeout = 12000
+                connection.inputStream.use { BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+            if (bitmap != null) {
+                runOnUiThread { target.setImageBitmap(bitmap) }
+            }
+        }.start()
+    }
+
+    private fun mediaUrl(path: String): String {
+        if (path.startsWith("http://") || path.startsWith("https://")) return path
+        val base = apiConfig.apiBaseUrl.trimEnd('/')
+        val origin = base.substringBefore("/sleepwell-api")
+        return if (path.startsWith("/sleepwell-api/")) {
+            origin + path
+        } else {
+            base + "/" + path.trimStart('/')
+        }
+    }
 
     private fun contentTypeLabel(item: HealthContentItem): String =
         if (item.type == "video") "视频" else "漫画"
@@ -850,10 +1384,10 @@ class MainActivity : AppCompatActivity() {
             addView(nativeMenu("clipboard-list", "#E6F1FB", "#185FA5", "首次问卷", "8-10分钟 · 生活习性 · 量表评估", "首次", onClick = {
                 showDetail(surveyEntryPage(), Page.Profile)
             }))
-            addView(nativeMenu("trending-up", "#EAF3DE", "#3B6D11", "月度复查问卷", "3-5分钟 · ISI复测 · 习惯改善", "月度", onClick = {
+            addView(nativeMenu("trending-up", "#EAF3DE", "#3B6D11", "月度复查问卷", "3-5分钟 · 生活习惯 · 睡眠变化", "月度", onClick = {
                 showDetail(monthlyReviewSurveyPage(), Page.Profile)
             }))
-            addView(nativeMenu("clipboard-list", "#E6F1FB", "#185FA5", "调试工具", "模拟数据 · 内容清单 · 本地状态", "测试", onClick = {
+            addView(nativeMenu("clipboard-list", "#E6F1FB", "#185FA5", "调试工具", "云端数据 · 内容清单 · 接口状态", "测试", onClick = {
                 showDetail(debugToolsPage(), Page.Profile)
             }))
             addView(nativeMenu("bell", "#FCEBEB", "#793434", "提醒偏好设置", "勿扰时段 · 提醒强度"))
@@ -872,8 +1406,8 @@ class MainActivity : AppCompatActivity() {
                 fill = "#E6F1FB",
                 title = "首次入组评估",
                 subtitle = "约需 8-10 分钟 · 仅需完成一次",
-                badges = listOf("生活习性 · 32题", "量表评估 · 7份", "睡眠画像生成"),
-                onClick = { showDetail(initialLifestyleSurveyPage(), Page.Profile) },
+                badges = listOf("基础信息", "生活习性", "影响与归因"),
+                onClick = { showDetail(initialBasicSurveyPage(), Page.Profile) },
             ))
             addView(surveyInfoCard(
                 iconName = "trending-up",
@@ -881,104 +1415,275 @@ class MainActivity : AppCompatActivity() {
                 fill = "#EAF3DE",
                 title = "月度睡眠改善复查",
                 subtitle = "约需 3-5 分钟 · 每月 1 次",
-                badges = listOf("ISI 复测", "习惯改善评估", "效果反馈"),
+                badges = listOf("生活习惯复查", "睡眠变化", "音乐偏好"),
                 onClick = { showDetail(monthlyReviewSurveyPage(), Page.Profile) },
             ))
             addView(sectionLabel("首次评估分为四步"))
-            addView(stepTimeline(listOf("基础信息" to true, "生活习性" to true, "失眠归因" to false, "标准量表" to false)))
-            addView(surveyButton("开始首次评估", true) { showDetail(initialLifestyleSurveyPage(), Page.Profile) })
+            addView(stepTimeline(listOf("基础信息" to true, "生活习性" to false, "睡眠影响" to false, "相关因素" to false)))
+            addView(surveyButton("开始首次评估", true) { showDetail(initialBasicSurveyPage(), Page.Profile) })
             addView(small("数据仅用于个性化睡眠干预，严格保护隐私").apply {
                 gravity = Gravity.CENTER
                 setPadding(0, dp(6), 0, 0)
             })
         }
 
+    private fun initialBasicSurveyPage(): LinearLayout =
+        screen().apply {
+            addView(surveyHeader("基础信息", "第 1 步 / 4") { showDetail(surveyEntryPage(), Page.Profile) })
+            addView(progress(0.25f, "#185FA5"))
+            addView(notification("clipboard-list", "睡眠调查表（首次）", "请填写基本资料。姓名可缩写，信息仅用于建立个人睡眠画像。", "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
+            addView(surveyInputMock("姓名（可缩写）", "请输入姓名或缩写"))
+            addView(surveyInputMock("出生年月", "年 / 月"))
+            addView(questionText("性别", "单选"))
+            addView(surveyChoiceGroup(listOf("男", "女")))
+            addView(questionText("民族", "单选，可补充说明").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("汉族", "其他")))
+            addView(surveyInputMock("其他民族说明", "如有，请填写"))
+            addView(questionText("宗教信仰", "单选，可补充说明").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("无", "佛教", "其他")))
+            addView(surveyInputMock("其他宗教说明", "如有，请填写"))
+            addView(questionText("婚姻状况", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveySingleTagCloud(listOf("未婚", "已婚", "丧偶", "离婚", "其他"), itemsPerRow = 3))
+            addView(questionText("床伴", "是否有同床或同房睡眠伴侣").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("有", "无")))
+            addView(questionText("床伴的睡眠情况", "可多选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyTagCloud(listOf("正常", "打鼾", "睡觉时拳打脚踢", "失眠"), itemsPerRow = 2))
+            addView(questionText("职业情况", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveySingleTagCloud(listOf("无业", "待业", "在职", "退休"), itemsPerRow = 2))
+            addView(questionText("居住方式", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveySingleTagCloud(listOf("独居", "集体宿舍", "与家人同住", "其他"), itemsPerRow = 2))
+            addView(questionText("文化程度", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("初中及以下", "高中", "本科及以上")))
+            addView(surveyFooterButtons(
+                previousText = "返回入口",
+                nextText = "下一步",
+                onPrevious = { showDetail(surveyEntryPage(), Page.Profile) },
+                onNext = { showDetail(initialLifestyleSurveyPage(), Page.Profile) },
+            ))
+        }
+
     private fun initialLifestyleSurveyPage(): LinearLayout =
         screen().apply {
-            addView(surveyHeader("生活习性评估", "第 2 步 / 4") { showDetail(surveyEntryPage(), Page.Profile) })
+            addView(surveyHeader("生活习性评估", "第 2 步 / 4") { showDetail(initialBasicSurveyPage(), Page.Profile) })
             addView(progress(0.50f, "#185FA5"))
-            addView(questionText("您有饮酒习惯吗？", "如有，请选择通常的饮酒时间"))
-            addView(surveyOption("无饮酒习惯", false))
-            addView(surveyOption("有，通常在晚间", true))
-            addView(surveyOption("有，通常在睡前1小时内", false))
-            addView(questionText("咖啡因类饮品习惯", "可多选（咖啡、可乐、浓茶等）").apply { setPadding(0, dp(10), 0, 0) })
-            addView(surveyCheckOption("无此习惯", false))
-            addView(surveyCheckOption("下午（13:00-17:00）", true))
-            addView(surveyCheckOption("傍晚（17:00-21:00）", true))
-            addView(surveyCheckOption("睡前2小时内", false))
+            addView(questionText("饮酒习惯", "单选，并选择习惯饮酒时间"))
+            val alcoholTimes = surveyTagCloud(listOf("早", "中", "晚", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(alcoholTimes, it == "是") }))
+            addView(alcoholTimes)
+            setSurveyEnabled(alcoholTimes, false)
+            addView(questionText("吸烟习惯", "单选，并选择习惯吸烟时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val smokingTimes = surveyTagCloud(listOf("白天", "晚上", "睡前"), itemsPerRow = 3)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(smokingTimes, it == "是") }))
+            addView(smokingTimes)
+            setSurveyEnabled(smokingTimes, false)
+            addView(questionText("喝茶习惯", "单选，并选择习惯喝茶时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val teaTimes = surveyTagCloud(listOf("上午", "下午", "晚上", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(teaTimes, it == "是") }))
+            addView(teaTimes)
+            setSurveyEnabled(teaTimes, false)
+            addView(questionText("含咖啡因类饮料习惯", "可乐 / 咖啡；单选，并选择习惯饮用时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val caffeineTimes = surveyTagCloud(listOf("上午", "下午", "晚上", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(caffeineTimes, it == "是") }))
+            addView(caffeineTimes)
+            setSurveyEnabled(caffeineTimes, false)
+            addView(questionText("运动习惯", "单选，并选择运动类型").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val exerciseType = surveySingleTagCloud(listOf("有氧", "无氧"), itemsPerRow = 2)
+            val exerciseProjectLabel = questionText("习惯运动项目", "可多选").apply { setPadding(0, dp(8), 0, dp(8)) }
+            val exerciseProjects = surveyTagCloud(
+                listOf("散步", "快走", "慢跑", "竞走", "游泳", "骑自行车", "打太极拳", "跳舞", "做韵律操", "跳绳", "打篮球", "踢足球"),
+                itemsPerRow = 3,
+            )
+            addView(surveyChoiceGroup(listOf("有", "无"), onSelected = {
+                val enabled = it == "有"
+                setSurveyEnabled(exerciseType, enabled)
+                setSurveyEnabled(exerciseProjectLabel, enabled)
+                setSurveyEnabled(exerciseProjects, enabled)
+            }))
+            addView(exerciseType)
+            addView(exerciseProjectLabel)
+            addView(exerciseProjects)
+            setSurveyEnabled(exerciseType, false)
+            setSurveyEnabled(exerciseProjectLabel, false)
+            setSurveyEnabled(exerciseProjects, false)
+            addView(questionText("睡前行为", "选择符合情况的项目").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyCheckOption("睡前3小时内运动", false))
+            addView(surveyCheckOption("睡前看电子产品", false))
+            addView(surveyCheckOption("夜间睡不着时看时间", false))
             addView(surveyFooterButtons(
-                previousText = "上一题",
-                nextText = "下一题",
-                onPrevious = { showDetail(surveyEntryPage(), Page.Profile) },
+                previousText = "上一步",
+                nextText = "下一步",
+                onPrevious = { showDetail(initialBasicSurveyPage(), Page.Profile) },
+                onNext = { showDetail(initialSleepImpactSurveyPage(), Page.Profile) },
+            ))
+        }
+
+    private fun initialSleepImpactSurveyPage(): LinearLayout =
+        screen().apply {
+            addView(surveyHeader("睡眠影响评估", "第 3 步 / 4") { showDetail(initialLifestyleSurveyPage(), Page.Profile) })
+            addView(progress(0.75f, "#185FA5"))
+            addView(questionText("陌生睡眠环境", "假如当晚更换为陌生的睡眠环境，您的睡眠情况是"))
+            addView(surveyChoiceGroup(listOf("睡得比平常更好", "睡得跟平常一样", "睡得比平常要差")))
+            addView(questionText("睡眠环境变化程度", "1-10分；分数越高表示变化程度越高").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(scaleTenRow())
+            addView(questionText("睡眠不好对生活的影响", "可多选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyCheckList(
+                listOf("担心/紧张", "容易犯错", "注意力不集中", "记忆力下降", "烦躁", "疲劳", "犯困", "易激惹", "做事主动性下降", "对睡眠状况不满意", "行为紊乱"),
+            ))
+            addView(surveyFooterButtons(
+                previousText = "上一步",
+                nextText = "下一步",
+                onPrevious = { showDetail(initialLifestyleSurveyPage(), Page.Profile) },
                 onNext = { showDetail(initialCauseSurveyPage(), Page.Profile) },
             ))
         }
 
     private fun initialCauseSurveyPage(): LinearLayout =
         screen().apply {
-            addView(surveyHeader("失眠归因与心理特征", "第 3 步 / 4") { showDetail(initialLifestyleSurveyPage(), Page.Profile) })
-            addView(progress(0.75f, "#185FA5"))
-            addView(questionText("您认为睡眠不好的相关因素", "可多选，选出所有符合情况的选项"))
-            addView(tagRows(
-                listOf(
-                    listOf("白天睡太多" to true, "睡前看手机" to true, "生活压力大" to true),
-                    listOf("过晚喝咖啡" to false, "睡眠时间不规律" to true),
-                    listOf("白天活动不足" to false, "熬夜加班" to false, "早上赖床" to false),
-                    listOf("太早上床" to false, "睡前过度思虑" to true),
-                    listOf("噪声/光线干扰" to false, "倒班工作" to false),
-                    listOf("过度担心睡眠" to true, "假期作息不规律" to false),
-                    listOf("夜间看时间" to false, "太用力入睡" to false),
-                ),
-            ))
-            addView(questionText("您的性格特点", "可多选").apply { setPadding(0, dp(8), 0, 0) })
-            addView(tagRows(
-                listOf(
-                    listOf("思虑过多" to true, "追求完美" to true, "外向" to false),
-                    listOf("敏感" to true, "要强" to false, "压抑情绪" to false),
-                ),
-            ))
-            addView(surveyFooterButtons(
-                previousText = "上一题",
-                nextText = "下一题",
-                onPrevious = { showDetail(initialLifestyleSurveyPage(), Page.Profile) },
-                onNext = { showDetail(initialScaleSurveyPage(), Page.Profile) },
-            ))
-        }
-
-    private fun initialScaleSurveyPage(): LinearLayout =
-        screen().apply {
-            addView(surveyHeader("标准量表评估", "第 4 步 / 4") { showDetail(initialCauseSurveyPage(), Page.Profile) })
+            addView(surveyHeader("相关因素与心理特征", "第 4 步 / 4") { showDetail(initialSleepImpactSurveyPage(), Page.Profile) })
             addView(progress(1.0f, "#185FA5"))
-            addView(notification("shield-check", "首次问卷即将完成", "已记录基础信息、生活习性与失眠归因。下一步可继续完成 ISI、PSQI 等标准量表，生成个人睡眠画像。", "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
-            addView(questionText("过去两周，您对当前睡眠模式满意吗？", "0=非常满意  4=非常不满意"))
-            addView(scaleRow(selected = 3, accent = "#185FA5"))
-            addView(questionText("优先改善目标", "可多选").apply { setPadding(0, dp(8), 0, 0) })
-            addView(tagRows(
+            addView(notification("shield-check", "最后一步", "这些因素会用于后续健康教育内容推荐，例如睡前手机、生活压力、作息不规律、饮酒、喝茶、抽烟、午睡等。", "#185FA5", "#E6F1FB", "#0C447C", "#0C447C"))
+            addView(questionText("您的性格特点", "可多选"))
+            addView(surveyTagCloud(listOf("外向", "内向", "敏感", "压抑", "追求完美", "思虑过多", "较真", "要强"), itemsPerRow = 3))
+            addView(questionText("睡眠不好相关因素", "可多选，选出所有符合情况的项目").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyCheckList(
                 listOf(
-                    listOf("更快入睡" to true, "减少夜醒" to true, "提高白天精力" to false),
-                    listOf("稳定作息" to true, "减少睡前焦虑" to true),
+                    "从小就睡眠不好",
+                    "父亲或母亲睡眠不好",
+                    "白天睡太多",
+                    "白天活动不足",
+                    "白天躺着时间太久",
+                    "过晚饮用含咖啡因饮料",
+                    "过多饮用含咖啡因饮料",
+                    "与床伴睡眠时间不同步",
+                    "社会/工作压力导致不良睡眠时间表",
+                    "睡眠环境变化",
+                    "倒班",
+                    "熬夜加班",
+                    "假期作息不规律",
+                    "更换睡眠环境",
+                    "早上赖床",
+                    "太早上床",
+                    "睡眠时间不规律",
+                    "缺乏规律光照",
+                    "饮食不规律",
+                    "生活压力大",
+                    "床上做与睡眠无关的事",
+                    "过度担心睡眠",
+                    "睡前或床上过度担心和思虑",
+                    "强光、噪声等环境干扰",
+                    "半夜看时间",
+                    "太用力入睡",
+                    "晚上剧烈运动",
                 ),
             ))
             addView(surveyFooterButtons(
-                previousText = "上一题",
-                nextText = "完成评估",
-                onPrevious = { showDetail(initialCauseSurveyPage(), Page.Profile) },
+                previousText = "上一步",
+                nextText = "提交问卷",
+                onPrevious = { showDetail(initialSleepImpactSurveyPage(), Page.Profile) },
                 onNext = { showDetail(surveyEntryPage(), Page.Profile) },
             ))
         }
 
     private fun monthlyReviewSurveyPage(): LinearLayout =
         screen().apply {
-            addView(surveyHeader("月度睡眠改善复查", "第 2 月") { showPage(Page.Profile) })
-            addView(progress(0.60f, "#3B6D11", "#C0DD97"))
-            addView(notification("trending-up", "ISI 失眠严重程度复测", "上月得分：15分（中度失眠） · 本月变化如何？", "#1D9E75", "#EAF3DE", "#085041", "#085041"))
-            addView(questionText("过去两周，入睡困难的严重程度", "0=没有问题  4=非常严重"))
-            addView(scaleRow(selected = 2, accent = "#185FA5"))
-            addView(questionText("过去一个月，以下习惯改善情况", "针对您首次评估的问题项逐一复查").apply { setPadding(0, dp(10), 0, 0) })
-            addView(habitReviewRow("睡前看手机习惯", selected = 0))
-            addView(habitReviewRow("睡前思虑过多", selected = 1))
-            addView(habitReviewRow("过度担心睡眠", selected = 2))
-            addView(surveyButton("提交复查 · 查看本月报告", true) { showPage(Page.Profile) })
+            addView(surveyHeader("月度睡眠调查表", "第 1 步 / 3") { showPage(Page.Profile) })
+            addView(progress(0.33f, "#3B6D11", "#C0DD97"))
+            addView(notification(
+                "trending-up",
+                "近期睡眠状态复查",
+                "用于了解本月生活习惯变化，并为下一步睡眠疗愈内容推荐提供依据。",
+                "#1D9E75",
+                "#EAF3DE",
+                "#085041",
+                "#085041",
+            ))
+            addView(questionText("饮酒习惯", "单选，并选择习惯饮酒的时间"))
+            val monthlyAlcoholTimes = surveyTagCloud(listOf("早", "中", "晚", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(monthlyAlcoholTimes, it == "是") }))
+            addView(monthlyAlcoholTimes)
+            setSurveyEnabled(monthlyAlcoholTimes, false)
+            addView(questionText("吸烟习惯", "单选，并选择习惯吸烟的时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val monthlySmokingTimes = surveyTagCloud(listOf("白天", "晚上", "睡前"), itemsPerRow = 3)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(monthlySmokingTimes, it == "是") }))
+            addView(monthlySmokingTimes)
+            setSurveyEnabled(monthlySmokingTimes, false)
+            addView(questionText("喝茶习惯", "单选，并选择习惯喝茶的时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val monthlyTeaTimes = surveyTagCloud(listOf("上午", "下午", "晚上", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(monthlyTeaTimes, it == "是") }))
+            addView(monthlyTeaTimes)
+            setSurveyEnabled(monthlyTeaTimes, false)
+            addView(questionText("含咖啡因类饮料习惯", "可乐 / 咖啡；单选，并选择习惯饮用时间").apply { setPadding(0, dp(8), 0, dp(8)) })
+            val monthlyCaffeineTimes = surveyTagCloud(listOf("上午", "下午", "晚上", "睡前"), itemsPerRow = 4)
+            addView(surveyChoiceGroup(listOf("是", "否"), onSelected = { setSurveyEnabled(monthlyCaffeineTimes, it == "是") }))
+            addView(monthlyCaffeineTimes)
+            setSurveyEnabled(monthlyCaffeineTimes, false)
+            addView(surveyFooterButtons(
+                previousText = "返回",
+                nextText = "下一步",
+                onPrevious = { showPage(Page.Profile) },
+                onNext = { showDetail(monthlyExerciseSurveyPage(), Page.Profile) },
+            ))
+        }
+
+    private fun monthlyExerciseSurveyPage(): LinearLayout =
+        screen().apply {
+            addView(surveyHeader("运动与睡前行为", "第 2 步 / 3") { showDetail(monthlyReviewSurveyPage(), Page.Profile) })
+            addView(progress(0.66f, "#3B6D11", "#C0DD97"))
+            addView(questionText("运动习惯", "单选，并选择习惯运动类型"))
+            val monthlyExerciseType = surveySingleTagCloud(listOf("有氧", "无氧"), itemsPerRow = 2)
+            val monthlyExerciseProjectLabel = questionText("习惯运动项目", "可多选").apply { setPadding(0, dp(8), 0, dp(8)) }
+            val monthlyExerciseProjects = surveyCheckList(
+                listOf("散步", "快走", "慢跑", "竞走", "游泳", "骑自行车", "打太极拳", "跳舞", "做韵律操", "跳绳", "打篮球", "踢足球"),
+            )
+            addView(surveyChoiceGroup(listOf("有", "无"), onSelected = {
+                val enabled = it == "有"
+                setSurveyEnabled(monthlyExerciseType, enabled)
+                setSurveyEnabled(monthlyExerciseProjectLabel, enabled)
+                setSurveyEnabled(monthlyExerciseProjects, enabled)
+            }))
+            addView(monthlyExerciseType)
+            addView(monthlyExerciseProjectLabel)
+            addView(monthlyExerciseProjects)
+            setSurveyEnabled(monthlyExerciseType, false)
+            setSurveyEnabled(monthlyExerciseProjectLabel, false)
+            setSurveyEnabled(monthlyExerciseProjects, false)
+            addView(questionText("睡前3小时内运动的习惯", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("有", "无")))
+            addView(questionText("睡前是否有看电子产品的习惯", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("有", "无")))
+            addView(questionText("夜间睡不着时有看时间的习惯", "单选").apply { setPadding(0, dp(8), 0, dp(8)) })
+            addView(surveyChoiceGroup(listOf("有", "无")))
+            addView(surveyFooterButtons(
+                previousText = "上一步",
+                nextText = "下一步",
+                onPrevious = { showDetail(monthlyReviewSurveyPage(), Page.Profile) },
+                onNext = { showDetail(monthlyFeedbackSurveyPage(), Page.Profile) },
+            ))
+        }
+
+    private fun monthlyFeedbackSurveyPage(): LinearLayout =
+        screen().apply {
+            addView(surveyHeader("睡眠变化与偏好", "第 3 步 / 3") { showDetail(monthlyExerciseSurveyPage(), Page.Profile) })
+            addView(progress(1.0f, "#3B6D11", "#C0DD97"))
+            addView(notification(
+                "heart-rate-monitor",
+                "月度复查反馈",
+                "您的选择将用于调整下月睡眠疗愈建议、健康教育视频与漫画推荐。",
+                "#1D9E75",
+                "#EAF3DE",
+                "#085041",
+                "#085041",
+            ))
+            addView(questionText("您自我感觉近期的睡眠情况", "单选"))
+            addView(surveyChoiceGroup(listOf("明显好转", "没有感觉变化", "比原来更差")))
+            addView(questionText("清醒状态时播放的音乐偏好", "可多选").apply { setPadding(0, dp(10), 0, dp(8)) })
+            addView(surveyTagCloud(listOf("呼吸引导", "粉红噪声", "正念冥想", "肌肉放松"), itemsPerRow = 2))
+            addView(surveyFooterButtons(
+                previousText = "上一步",
+                nextText = "提交复查",
+                onPrevious = { showDetail(monthlyExerciseSurveyPage(), Page.Profile) },
+                onNext = { showPage(Page.Profile) },
+            ))
         }
 
     private fun surveyHeader(text: String, meta: String, onBack: () -> Unit): LinearLayout =
@@ -1038,6 +1743,231 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, dp(8))
         }
 
+    private fun timeAdjuster(label: String, baseTime: String, initialTime: String, accent: String, onSelected: (String) -> Unit): LinearLayout =
+        card().apply {
+            val offsets = listOf(-30, -15, 0, 15, 30)
+            var selectedOffset = offsets.firstOrNull { shiftClockTime(baseTime, it) == initialTime } ?: 0
+            val accentColor = Color.parseColor(accent)
+            val valueView = valueText(shiftClockTime(baseTime, selectedOffset), 26f, accent)
+            val chips = mutableListOf<TextView>()
+
+            fun optionLabel(offset: Int): String =
+                when {
+                    offset < 0 -> "提前${kotlin.math.abs(offset)}"
+                    offset > 0 -> "延后$offset"
+                    else -> "建议"
+                }
+
+            fun applyStates() {
+                valueView.text = shiftClockTime(baseTime, selectedOffset)
+                chips.forEachIndexed { index, chip ->
+                    val active = offsets[index] == selectedOffset
+                    chip.setTextColor(if (active) Color.WHITE else C.textSecondary)
+                    chip.typeface = Typeface.create("sans", if (active) Typeface.BOLD else Typeface.NORMAL)
+                    chip.background = solid(if (active) accentColor else C.bgSecondary, if (active) accentColor else C.borderTertiary, 8)
+                }
+            }
+
+            addView(row(Gravity.CENTER_VERTICAL).apply {
+                addView(column().apply {
+                    layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
+                    addView(body(label, 15f, "#25231E", true))
+                    addView(small("建议 $baseTime · 可在前后 30 分钟内调整"))
+                })
+                addView(valueView)
+            })
+            addView(row().apply {
+                setPadding(0, dp(10), 0, 0)
+                offsets.forEach { offset ->
+                    val chip = body(optionLabel(offset), 11f, "#65635C", offset == selectedOffset).apply {
+                        gravity = Gravity.CENTER
+                        setPadding(dp(4), dp(8), dp(4), dp(8))
+                        layoutParams = LinearLayout.LayoutParams(0, wrap, 1f).apply { rightMargin = dp(5) }
+                        isClickable = true
+                        setOnClickListener {
+                            selectedOffset = offset
+                            onSelected(shiftClockTime(baseTime, selectedOffset))
+                            applyStates()
+                        }
+                    }
+                    chips.add(chip)
+                    addView(chip)
+                }
+            })
+            applyStates()
+        }
+
+    private fun shiftClockTime(time: String, offsetMinutes: Int): String {
+        val parts = time.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 0
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        val total = (hour * 60 + minute + offsetMinutes).floorMod(24 * 60)
+        return "%02d:%02d".format(total / 60, total % 60)
+    }
+
+    private fun Int.floorMod(modulus: Int): Int =
+        ((this % modulus) + modulus) % modulus
+
+    private fun surveyInputMock(label: String, placeholder: String): LinearLayout =
+        column().apply {
+            setPadding(0, dp(5), 0, dp(7))
+            addView(body(label, 14f, "#25231E", true))
+            addView(EditText(this@MainActivity).apply {
+                hint = placeholder
+                setHintTextColor(Color.parseColor("#9A968D"))
+                setTextColor(Color.parseColor("#25231E"))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                typeface = Typeface.create("sans", Typeface.NORMAL)
+                includeFontPadding = true
+                inputType = InputType.TYPE_CLASS_TEXT
+                background = solid(C.bgSecondary, C.borderSecondary, 8)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                layoutParams = LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6) }
+            })
+        }
+
+    private fun surveyChoiceGroup(options: List<String>, selectedIndex: Int = -1, onSelected: ((String) -> Unit)? = null): LinearLayout =
+        column().apply {
+            var selected = selectedIndex
+            val rows = mutableListOf<LinearLayout>()
+            val marks = mutableListOf<TextView>()
+            val labels = mutableListOf<TextView>()
+
+            fun applyStates() {
+                rows.forEachIndexed { index, choiceRow ->
+                    val active = selected == index
+                    choiceRow.background = solid(if (active) Color.parseColor("#E6F1FB") else C.bgPrimary, if (active) Color.parseColor("#185FA5") else C.borderTertiary, 10)
+                    marks[index].background = solid(if (active) Color.parseColor("#185FA5") else C.transparent, if (active) Color.parseColor("#185FA5") else C.borderSecondary, 8, strokeWidthDp = 2)
+                    labels[index].setTextColor(Color.parseColor(if (active) "#0C447C" else "#25231E"))
+                }
+            }
+
+            options.forEachIndexed { index, text ->
+                val mark = TextView(this@MainActivity).apply {
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    layoutParams = LinearLayout.LayoutParams(dp(17), dp(17)).apply { rightMargin = dp(9) }
+                }
+                val labelView = body(text, 14f, "#25231E").apply {
+                    layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
+                }
+                val choiceRow = row(Gravity.CENTER_VERTICAL).apply {
+                    setPadding(dp(10), dp(9), dp(10), dp(9))
+                    layoutParams = LinearLayout.LayoutParams(match, wrap).apply { bottomMargin = dp(6) }
+                    addView(mark)
+                    addView(labelView)
+                    isClickable = true
+                    setOnClickListener {
+                        selected = index
+                        applyStates()
+                        onSelected?.invoke(text)
+                    }
+                }
+                rows.add(choiceRow)
+                marks.add(mark)
+                labels.add(labelView)
+                addView(choiceRow)
+            }
+            applyStates()
+        }
+
+    private fun surveyTagCloud(options: List<String>, selected: Set<String> = emptySet(), itemsPerRow: Int = 3): LinearLayout =
+        tagRows(options.chunked(itemsPerRow).map { rowItems -> rowItems.map { it to selected.contains(it) } })
+
+    private fun surveySingleTagCloud(options: List<String>, selectedIndex: Int = -1, itemsPerRow: Int = 3): LinearLayout =
+        column().apply {
+            var selected = selectedIndex
+            val tags = mutableListOf<TextView>()
+
+            fun applyStates() {
+                tags.forEachIndexed { index, tag ->
+                    val active = selected == index
+                    tag.setTextColor(Color.parseColor(if (active) "#0C447C" else "#65635C"))
+                    tag.background = solid(if (active) Color.parseColor("#E6F1FB") else C.bgPrimary, if (active) Color.parseColor("#185FA5") else C.borderSecondary, 8)
+                }
+            }
+
+            options.chunked(itemsPerRow).forEachIndexed { rowIndex, rowItems ->
+                addView(row().apply {
+                    rowItems.forEachIndexed { columnIndex, text ->
+                        val tagIndex = rowIndex * itemsPerRow + columnIndex
+                        val tag = body(text, 12f, "#65635C").apply {
+                            setPadding(dp(8), dp(6), dp(8), dp(6))
+                            layoutParams = LinearLayout.LayoutParams(wrap, wrap).apply {
+                                rightMargin = dp(5)
+                                bottomMargin = dp(6)
+                            }
+                            isClickable = true
+                            setOnClickListener {
+                                selected = tagIndex
+                                applyStates()
+                            }
+                        }
+                        tags.add(tag)
+                        addView(tag)
+                    }
+                })
+            }
+            applyStates()
+        }
+
+    private fun surveyCheckList(options: List<String>): LinearLayout =
+        column().apply {
+            options.forEach { addView(surveyCheckOption(it, false)) }
+        }
+
+    private fun scaleTenRow(selectedValue: Int = -1): LinearLayout =
+        column().apply {
+            var selected = selectedValue
+            val boxes = mutableListOf<Pair<Int, TextView>>()
+
+            fun applyStates() {
+                boxes.forEach { (value, box) ->
+                    val active = selected == value
+                    box.setTextColor(Color.parseColor(if (active) "#FFFFFF" else "#65635C"))
+                    box.typeface = Typeface.create("sans", if (active) Typeface.BOLD else Typeface.NORMAL)
+                    box.background = solid(if (active) C.accent else C.bgSecondary, if (active) C.accent else C.borderTertiary, 6)
+                }
+            }
+
+            (1..10).chunked(5).forEach { rowValues ->
+                addView(row().apply {
+                    rowValues.forEach { value ->
+                        val box = body(value.toString(), 13f, "#65635C").apply {
+                            gravity = Gravity.CENTER
+                            layoutParams = LinearLayout.LayoutParams(0, dp(32), 1f).apply {
+                                rightMargin = dp(5)
+                                bottomMargin = dp(6)
+                            }
+                            isClickable = true
+                            setOnClickListener {
+                                selected = value
+                                applyStates()
+                            }
+                        }
+                        boxes.add(value to box)
+                        addView(box)
+                    }
+                })
+            }
+            applyStates()
+        }
+
+    private fun setSurveyEnabled(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        view.alpha = if (enabled) 1f else 0.42f
+        if (view is ViewGroup) setSurveyChildrenEnabled(view, enabled)
+    }
+
+    private fun setSurveyChildrenEnabled(group: ViewGroup, enabled: Boolean) {
+        for (index in 0 until group.childCount) {
+            val child = group.getChildAt(index)
+            child.isEnabled = enabled
+            if (child is ViewGroup) setSurveyChildrenEnabled(child, enabled)
+        }
+    }
+
     private fun surveyOption(text: String, selected: Boolean): LinearLayout =
         surveyChoice(text, selected, square = false)
 
@@ -1046,20 +1976,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun surveyChoice(text: String, selected: Boolean, square: Boolean): LinearLayout =
         row(Gravity.CENTER_VERTICAL).apply {
-            background = solid(if (selected) Color.parseColor("#E6F1FB") else C.bgPrimary, if (selected) Color.parseColor("#185FA5") else C.borderTertiary, 10)
+            var active = selected
             setPadding(dp(10), dp(9), dp(10), dp(9))
             layoutParams = LinearLayout.LayoutParams(match, wrap).apply { bottomMargin = dp(6) }
-            addView(TextView(this@MainActivity).apply {
-                background = solid(if (selected) Color.parseColor("#185FA5") else C.transparent, if (selected) Color.parseColor("#185FA5") else C.borderSecondary, if (square) 4 else 8, strokeWidthDp = 2)
-                this.text = if (selected && square) "✓" else ""
+            val mark = TextView(this@MainActivity).apply {
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                 layoutParams = LinearLayout.LayoutParams(dp(17), dp(17)).apply { rightMargin = dp(9) }
-            })
-            addView(body(text, 14f, if (selected) "#0C447C" else "#25231E").apply {
+            }
+            val labelView = body(text, 14f, if (active) "#0C447C" else "#25231E").apply {
                 layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
-            })
+            }
+            fun applyState() {
+                background = solid(if (active) Color.parseColor("#E6F1FB") else C.bgPrimary, if (active) Color.parseColor("#185FA5") else C.borderTertiary, 10)
+                mark.background = solid(if (active) Color.parseColor("#185FA5") else C.transparent, if (active) Color.parseColor("#185FA5") else C.borderSecondary, if (square) 4 else 8, strokeWidthDp = 2)
+                mark.text = if (active && square) "✓" else ""
+                labelView.setTextColor(Color.parseColor(if (active) "#0C447C" else "#25231E"))
+            }
+            addView(mark)
+            addView(labelView)
+            applyState()
+            isClickable = true
+            setOnClickListener {
+                active = !active
+                applyState()
+            }
         }
 
     private fun surveyFooterButtons(previousText: String, nextText: String, onPrevious: () -> Unit, onNext: () -> Unit): LinearLayout =
@@ -1094,12 +2036,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun surveyTag(text: String, selected: Boolean): TextView =
         body(text, 12f, if (selected) "#0C447C" else "#65635C").apply {
-            background = solid(if (selected) Color.parseColor("#E6F1FB") else C.bgPrimary, if (selected) Color.parseColor("#185FA5") else C.borderSecondary, 8)
+            var active = selected
+            fun applyState() {
+                setTextColor(Color.parseColor(if (active) "#0C447C" else "#65635C"))
+                background = solid(if (active) Color.parseColor("#E6F1FB") else C.bgPrimary, if (active) Color.parseColor("#185FA5") else C.borderSecondary, 8)
+            }
             setPadding(dp(8), dp(6), dp(8), dp(6))
             layoutParams = LinearLayout.LayoutParams(wrap, wrap).apply {
                 rightMargin = dp(5)
                 bottomMargin = dp(6)
             }
+            isClickable = true
+            setOnClickListener {
+                active = !active
+                applyState()
+            }
+            applyState()
         }
 
     private fun scaleRow(selected: Int, accent: String): LinearLayout =
@@ -1136,16 +2088,17 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(0, wrap, 1f).apply { rightMargin = dp(5) }
         }
 
-    private fun debugToolsPage(): LinearLayout =
-        screen().apply {
+    private fun debugToolsPage(): LinearLayout {
+        if (sleepRecords.isEmpty()) return cloudDataStatePage("调试工具")
+        return screen().apply {
             val first = sleepRecords.first()
             val latest = latestSleepRecord()
-            val videoCount = healthContents.count { it.type == "video" }
-            val comicCount = healthContents.count { it.type == "comic" }
-            val missingContentAssets = healthContents.count { !assetExists(it.url) }
+            val bundles = contentBundles()
+            val videoCount = bundles.count { it.item.type == "video" }
+            val comicCount = bundles.count { it.item.type == "comic" }
             val config = apiConfig
             addView(backHeader("调试工具") { showPage(Page.Profile) })
-            addView(label("本地模拟数据 · 内容清单 · 联调预留"))
+            addView(label("云端模拟数据 · 云端内容清单 · 联调状态"))
             addView(sectionLabel("睡眠数据源"))
             addView(
                 card("#E6F1FB", null).apply {
@@ -1155,7 +2108,7 @@ class MainActivity : AppCompatActivity() {
                             layoutParams = LinearLayout.LayoutParams(0, wrap, 1f)
                             setPadding(dp(10), 0, dp(6), 0)
                             addView(body("7 天睡眠数据模型", 16f, "#0C447C", true))
-                            addView(small(if (sleepDataSource == "云端接口") config.url(config.sleepRecordsEndpoint) else "assets/mock_sleep_7days.json", "#0C447C"))
+                            addView(small(config.url(config.sleepRecordsEndpoint), "#0C447C"))
                         })
                         addView(badge(sleepDataSource, "#185FA5", "#FFFFFF"))
                     })
@@ -1184,8 +2137,8 @@ class MainActivity : AppCompatActivity() {
                         metricBox("漫画", "${comicCount}个", "#793434"),
                         metricBox("来源", contentDataSource, "#185FA5"),
                     ))
-                    addView(small("本地素材待放入：${missingContentAssets}个"))
-                    addView(nativeMenu("book", "#FCEBEB", "#793434", "查看健康教育内容中心", "读取本地视频 / 漫画清单", null, onClick = {
+                    addView(small("APP 不再打包本地视频或漫画清单，内容由云端接口返回。"))
+                    addView(nativeMenu("book", "#FCEBEB", "#793434", "查看健康教育内容中心", "读取云端视频 / 漫画清单", null, onClick = {
                         showDetail(contentCenterPage(Page.Profile), Page.Profile)
                     }))
                 },
@@ -1195,7 +2148,7 @@ class MainActivity : AppCompatActivity() {
                 card().apply {
                     addView(body(config.apiBaseUrl, 15f, "#185FA5", true))
                     addView(small("模式：${config.mode}"))
-                    addView(progressRow("睡眠监测垫数据链路", if (sleepDataSource == "云端接口") "已联通" else "本地回退", if (sleepDataSource == "云端接口") "#1D9E75" else "#BA7517", if (sleepDataSource == "云端接口") 0.82f else 0.36f, if (sleepDataSource == "云端接口") "#1D9E75" else "#EF9F27"))
+                    addView(progressRow("睡眠监测垫数据链路", if (remoteLoadError == null) "已联通" else "待恢复", if (remoteLoadError == null) "#1D9E75" else "#BA7517", if (remoteLoadError == null) 0.82f else 0.36f, if (remoteLoadError == null) "#1D9E75" else "#EF9F27"))
                     addView(body("已配置接口", 13f, "#65635C", true))
                     addView(small("GET ${config.sleepRecordsEndpoint}"))
                     addView(small("GET ${config.healthContentsEndpoint}"))
@@ -1204,6 +2157,7 @@ class MainActivity : AppCompatActivity() {
                 },
             )
         }
+    }
 
     private fun sleepReportPage(): LinearLayout =
         LinearLayout(this).apply {

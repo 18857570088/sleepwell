@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>SleepWell App Icon</title>
+  <desc>SleepWell sleep healing app icon: deep navy background with crescent moon in teal and heartbeat waveform in blue, with app name sleepwell at the bottom</desc>
+
+  <defs>
+    <clipPath id="moon-clip">
+      <rect x="0" y="0" width="576" height="1024"/>
+    </clipPath>
+    <clipPath id="icon-clip">
+      <rect x="0" y="0" width="1024" height="1024" rx="224"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0F1E35"/>
+
+  <!-- Star dots background -->
+  <circle cx="160" cy="200" r="6" fill="#5DCAA5" opacity="0.45"/>
+  <circle cx="750" cy="160" r="5" fill="#85B7EB" opacity="0.4"/>
+  <circle cx="870" cy="310" r="8" fill="#5DCAA5" opacity="0.3"/>
+  <circle cx="820" cy="490" r="4" fill="#378ADD" opacity="0.4"/>
+  <circle cx="200" cy="430" r="5" fill="#85B7EB" opacity="0.35"/>
+  <circle cx="120" cy="560" r="4" fill="#5DCAA5" opacity="0.3"/>
+  <circle cx="900" cy="580" r="6" fill="#85B7EB" opacity="0.3"/>
+  <circle cx="680" cy="110" r="4" fill="#5DCAA5" opacity="0.5"/>
+  <circle cx="310" cy="140" r="3" fill="#378ADD" opacity="0.4"/>
+  <circle cx="940" cy="420" r="3" fill="#5DCAA5" opacity="0.35"/>
+  <circle cx="80" cy="350" r="3" fill="#85B7EB" opacity="0.3"/>
+
+  <!-- Moon base circle (shadow layer) -->
+  <circle cx="546" cy="320" r="210" fill="#0D2540"/>
+
+  <!-- Moon crescent: full circle clipped to left half = crescent -->
+  <circle cx="546" cy="320" r="210" fill="#5DCAA5" clip-path="url(#moon-clip)"/>
+
+  <!-- Cutout circle to form the crescent shape -->
+  <circle cx="632" cy="268" r="168" fill="#0F1E35"/>
+
+  <!-- Moon inner glow rim (thin stroke on visible arc) -->
+  <circle cx="546" cy="320" r="210" fill="none" stroke="#9FE1CB" stroke-width="4" opacity="0.4" clip-path="url(#moon-clip)"/>
+
+  <!-- Heartbeat waveform -->
+  <!-- Baseline -->
+  <line x1="72" y1="696" x2="952" y2="696" stroke="#1a3a5c" stroke-width="2" opacity="0.5"/>
+
+  <!-- Waveform polyline -->
+  <polyline
+    points="72,696  188,696  242,596  298,800  352,648  406,696  512,696  574,604  632,756  690,696  748,696  808,696  868,696  952,696"
+    fill="none"
+    stroke="#378ADD"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Waveform highlight (lighter inner line for depth) -->
+  <polyline
+    points="72,696  188,696  242,596  298,800  352,648  406,696  512,696  574,604  632,756  690,696  748,696  808,696  868,696  952,696"
+    fill="none"
+    stroke="#85B7EB"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.45"/>
+
+  <!-- Endpoint dots -->
+  <circle cx="72" cy="696" r="10" fill="#378ADD"/>
+  <circle cx="952" cy="696" r="10" fill="#378ADD"/>
+
+  <!-- Peak dot highlight (at the highest point of the wave) -->
+  <circle cx="298" cy="800" r="14" fill="#5DCAA5"/>
+  <circle cx="298" cy="800" r="7" fill="#9FE1CB"/>
+
+  <!-- App name: sleepwell -->
+  <text
+    x="512"
+    y="930"
+    text-anchor="middle"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="88"
+    font-weight="300"
+    letter-spacing="8"
+    fill="#e8f4ff"
+    opacity="0.92">sleepwell</text>
+
+  <!-- Subtle underline accent below text -->
+  <line x1="330" y1="950" x2="694" y2="950" stroke="#5DCAA5" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+
+</svg>

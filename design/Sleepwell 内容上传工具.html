@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<!-- saved from url=(0048)http://152.136.62.157/sleepwell-api/tools/upload -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>Sleepwell 内容上传工具</title>
+  <style>
+    :root {
+      --bg: #fbfaf6;
+      --panel: #f2f0ea;
+      --line: #d9d6cc;
+      --text: #25231e;
+      --muted: #65635c;
+      --blue: #185fa5;
+      --green: #1d9e75;
+      --amber: #ba7517;
+      --red: #b64d35;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 28px 18px 42px; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    h2 { margin: 0 0 12px; font-size: 20px; }
+    h3 { margin: 0 0 6px; font-size: 16px; }
+    p { color: var(--muted); line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .wide { grid-column: 1 / -1; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+    label { display: block; margin: 12px 0 6px; font-weight: 650; font-size: 14px; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 16px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: var(--green); }
+    button.warning { background: var(--amber); }
+    button.neutral { background: #65635c; }
+    button.danger { background: var(--red); }
+    button.small {
+      border-radius: 7px;
+      padding: 7px 9px;
+      font-size: 12px;
+    }
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+    code, pre {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    code { padding: 2px 6px; }
+    pre { padding: 12px; overflow: auto; white-space: pre-wrap; }
+    .hint { font-size: 13px; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #e6f1fb;
+      color: #0c447c;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .actions, .history-controls, .preview-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .actions { margin-top: 16px; }
+    .answer-list, .selected-files {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 44px;
+    }
+    .trigger-quick-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .trigger-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 11px;
+    }
+    .trigger-chip.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+    .advanced-trigger {
+      background: #fff;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .advanced-trigger summary {
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .answer-list.empty, .selected-files.empty {
+      border-style: dashed;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .answer-option {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 7px 4px;
+      font-size: 14px;
+    }
+    .answer-option input {
+      width: auto;
+      margin-top: 3px;
+    }
+    .answer-key, .file-meta, .history-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .file-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid #eee9dc;
+      padding: 9px 0;
+    }
+    .file-row:last-child { border-bottom: 0; }
+    .file-index {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e6f1fb;
+      color: #0c447c;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .file-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .preview-empty {
+      background: #fff;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 18px;
+    }
+    .preview-meta { margin-bottom: 12px; }
+    .preview-meta p { margin: 4px 0; }
+    .preview-video video {
+      width: 100%;
+      max-height: 520px;
+      background: #111;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .preview-link {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--blue);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 9px 11px;
+      text-decoration: none;
+    }
+    .comic-list, .history-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+    .comic-item, .history-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .comic-group, .history-group {
+      grid-column: 1 / -1;
+    }
+    .comic-pages {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      padding: 12px 12px 0;
+    }
+    .comic-page {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f8f7f2;
+    }
+    .comic-page span {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      border-radius: 999px;
+      background: rgba(37, 35, 30, .78);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+    }
+    .comic-item img, .history-item img {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      background: #f8f7f2;
+    }
+    .history-item video {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      background: #111;
+    }
+    .comic-body, .history-body { padding: 12px; }
+    .comic-body p, .history-body p { margin: 4px 0; font-size: 13px; }
+    .danger-text { color: var(--red); }
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      .file-row { grid-template-columns: 32px 1fr; }
+      .file-buttons { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Sleepwell 内容上传工具</h1>
+  <p>用于在电脑上上传睡眠健康教育视频与漫画，并把素材绑定到调查问卷结果。上传后可立即预览刚保存的内容，也可在历史内容中查看已上传的视频或漫画。</p>
+
+  <div class="card">
+    <span class="badge">视频</span>
+    <span class="badge">漫画</span>
+    <span class="badge">调查结果触发</span>
+    <p class="hint">上传接口需要管理口令。口令由服务器配置项 <code>SLEEPWELL_ADMIN_TOKEN</code> 控制。</p>
+  </div>
+
+  <form id="uploadForm" class="card">
+    <div class="grid">
+      <div>
+        <label for="token">管理口令</label>
+        <input id="token" name="token" type="password" autocomplete="current-password" placeholder="请输入上传口令">
+      </div>
+      <div>
+        <label for="content_type">内容类型</label>
+        <select id="content_type" name="content_type" required="">
+          <option value="video">视频</option>
+          <option value="comic">漫画</option>
+        </select>
+      </div>
+      <div>
+        <label for="category_key">内容类型标签</label>
+        <select id="category_key" name="category_key" required=""><option value="">请选择内容类型标签</option><option value="alcohol">饮酒相关（alcohol）</option><option value="caffeine">咖啡因相关（caffeine）</option><option value="phone">睡前手机（phone）</option><option value="stress">生活压力（stress）</option><option value="irregular_schedule">作息不规律（irregular_schedule）</option><option value="overthinking">睡前过度思虑（overthinking）</option><option value="sleep_worry">过度担心睡眠（sleep_worry）</option><option value="sleep_restriction">睡眠时间限制（sleep_restriction）</option><option value="night_wake">夜醒应对（night_wake）</option><option value="exercise">运动相关（exercise）</option><option value="tea">喝茶相关（tea）</option><option value="smoking">抽烟相关（smoking）</option><option value="nap">午睡相关（nap）</option><option value="stimulus_control">睡眠刺激相关（stimulus_control）</option><option value="cognitive_restructuring">认知重构相关（cognitive_restructuring）</option></select>
+      </div>
+      <div>
+        <label for="sort_order">排序</label>
+        <input id="sort_order" name="sort_order" type="number" value="100">
+      </div>
+      <div class="wide">
+        <label for="trigger_preset">触发问题/场景（完整15类）</label>
+        <select id="trigger_preset"><option value="">请选择触发问题/场景</option><option value="alcohol" data-category="alcohol" data-question="drinkingHabit" data-answers="yes">饮酒相关（alcohol）</option><option value="caffeine" data-category="caffeine" data-question="caffeineHabit" data-answers="yes">咖啡因相关（caffeine）</option><option value="phone" data-category="phone" data-question="bedtimeBehaviors" data-answers="electronics_before_bed">睡前手机（phone）</option><option value="stress" data-category="stress" data-question="sleepFactors" data-answers="life_stress,social_work_stress_schedule">生活压力（stress）</option><option value="irregular_schedule" data-category="irregular_schedule" data-question="sleepFactors" data-answers="irregular_sleep_time,holiday_irregular,shift_work,overtime">作息不规律（irregular_schedule）</option><option value="overthinking" data-category="overthinking" data-question="sleepFactors" data-answers="bedtime_overthinking">睡前过度思虑（overthinking）</option><option value="sleep_worry" data-category="sleep_worry" data-question="sleepFactors" data-answers="sleep_worry">过度担心睡眠（sleep_worry）</option><option value="sleep_restriction" data-category="sleep_restriction" data-question="sleepFactors" data-answers="too_early_bed,late_wake,irregular_sleep_time">睡眠时间限制（sleep_restriction）</option><option value="night_wake" data-category="night_wake" data-question="bedtimeBehaviors" data-answers="clock_watching">夜醒应对（night_wake）</option><option value="exercise" data-category="exercise" data-question="sleepFactors" data-answers="low_activity,night_exercise">运动相关（exercise）</option><option value="tea" data-category="tea" data-question="teaHabit" data-answers="yes">喝茶相关（tea）</option><option value="smoking" data-category="smoking" data-question="smokingHabit" data-answers="yes">抽烟相关（smoking）</option><option value="nap" data-category="nap" data-question="sleepFactors" data-answers="daytime_nap,lying_too_long">午睡相关（nap）</option><option value="stimulus_control" data-category="stimulus_control" data-question="sleepFactors" data-answers="bed_non_sleep,clock_watching,try_hard_sleep,too_early_bed">睡眠刺激相关（stimulus_control）</option><option value="cognitive_restructuring" data-category="cognitive_restructuring" data-question="sleepFactors" data-answers="bedtime_overthinking,sleep_worry,try_hard_sleep">认知重构相关（cognitive_restructuring）</option></select>
+        <div id="triggerQuickList" class="trigger-quick-list" aria-label="完整触发场景快捷选择"><button type="button" class="trigger-chip" title="alcohol">饮酒相关</button><button type="button" class="trigger-chip" title="caffeine">咖啡因相关</button><button type="button" class="trigger-chip" title="phone">睡前手机</button><button type="button" class="trigger-chip" title="stress">生活压力</button><button type="button" class="trigger-chip" title="irregular_schedule">作息不规律</button><button type="button" class="trigger-chip" title="overthinking">睡前过度思虑</button><button type="button" class="trigger-chip" title="sleep_worry">过度担心睡眠</button><button type="button" class="trigger-chip" title="sleep_restriction">睡眠时间限制</button><button type="button" class="trigger-chip" title="night_wake">夜醒应对</button><button type="button" class="trigger-chip" title="exercise">运动相关</button><button type="button" class="trigger-chip" title="tea">喝茶相关</button><button type="button" class="trigger-chip" title="smoking">抽烟相关</button><button type="button" class="trigger-chip" title="nap">午睡相关</button><button type="button" class="trigger-chip" title="stimulus_control">睡眠刺激相关</button><button type="button" class="trigger-chip" title="cognitive_restructuring">认知重构相关</button></div>
+        <p class="hint">可直接选择运动相关、睡前手机、生活压力、作息不规律、睡前过度思虑等场景；选择后会自动填写高级 Key。</p>
+      </div>
+      <details class="wide advanced-trigger">
+        <summary>高级：查看或手动调整触发 Key</summary>
+        <div class="grid">
+          <div>
+            <label for="trigger_question_key">触发问题 Key</label>
+            <select id="trigger_question_key" name="trigger_question_key"><option value="">请选择触发问题 Key</option><option value="drinkingHabit">饮酒习惯（drinkingHabit）</option><option value="drinkingTimes">习惯饮酒时间（drinkingTimes）</option><option value="smokingHabit">吸烟习惯（smokingHabit）</option><option value="smokingTimes">习惯吸烟时间（smokingTimes）</option><option value="teaHabit">喝茶习惯（teaHabit）</option><option value="teaTimes">习惯喝茶时间（teaTimes）</option><option value="caffeineHabit">含咖啡因类饮料习惯（可乐/咖啡）（caffeineHabit）</option><option value="caffeineTimes">习惯饮用含咖啡因类饮料时间（caffeineTimes）</option><option value="exerciseHabit">运动习惯（exerciseHabit）</option><option value="exerciseType">习惯运动类型（exerciseType）</option><option value="exerciseProjects">习惯运动项目（exerciseProjects）</option><option value="bedtimeBehaviors">睡前行为（bedtimeBehaviors）</option><option value="unfamiliarSleepEnvironment">陌生睡眠环境（unfamiliarSleepEnvironment）</option><option value="sleepImpact">睡眠不好对生活的影响（sleepImpact）</option><option value="personalityTraits">性格特点（personalityTraits）</option><option value="sleepFactors">睡眠不好相关因素（sleepFactors）</option></select>
+          </div>
+          <div>
+            <label for="trigger_answer_keys">触发答案 Key（可多选）</label>
+            <input id="trigger_answer_keys" name="trigger_answer_keys" type="hidden" value="">
+            <div id="answerList" class="answer-list empty">请先选择触发问题/场景</div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <label for="title">标题</label>
+    <input id="title" name="title" required="" placeholder="如 饮酒与睡眠质量">
+
+    <div class="grid">
+      <div>
+        <label for="subtitle">副标题</label>
+        <input id="subtitle" name="subtitle" placeholder="如 睡眠卫生教育 · 3 分钟">
+      </div>
+      <div>
+        <label for="duration">时长/页数</label>
+        <input id="duration" name="duration" placeholder="如 3分钟 / 6页">
+      </div>
+    </div>
+
+    <label for="tags">标签</label>
+    <input id="tags" name="tags" placeholder="用英文逗号分隔，如 饮酒,睡眠卫生,入睡困难">
+
+    <label for="description">说明</label>
+    <textarea id="description" name="description" placeholder="请输入内容说明"></textarea>
+
+    <div class="grid">
+      <div>
+        <label for="file" id="fileLabel">视频文件</label>
+        <input id="file" name="file" type="file" required="" accept="video/*">
+        <p class="hint" id="fileHint">视频一次上传一个文件。</p>
+      </div>
+      <div>
+        <label for="cover">封面图，可选</label>
+        <input id="cover" name="cover" type="file" accept="image/*">
+      </div>
+    </div>
+
+    <label>已选择文件顺序</label>
+    <div id="fileOrderList" class="selected-files empty">尚未选择文件</div>
+
+    <div class="actions">
+      <button type="submit" id="uploadButton">上传及绑定规则</button>
+      <button class="neutral" type="button" id="newContent">新增内容</button>
+      <button class="secondary" type="button" id="testVideo">测试视频</button>
+      <button class="warning" type="button" id="testComic">测试漫画</button>
+    </div>
+  </form>
+
+  <div class="card" id="previewCard">
+    <h2>测试预览</h2>
+    <div id="preview" class="preview-empty">上传成功后会显示刚保存的视频或漫画；点击“测试视频”或“测试漫画”后，会显示推荐接口返回的内容。</div>
+  </div>
+
+  <div class="card">
+    <h2>历史内容</h2>
+    <div class="history-controls">
+      <select id="historyType" aria-label="历史内容类型">
+        <option value="">全部类型</option>
+        <option value="video">视频</option>
+        <option value="comic">漫画</option>
+      </select>
+      <select id="historyCategory" aria-label="历史内容分类"><option value="">全部分类</option><option value="alcohol">饮酒相关（alcohol）</option><option value="caffeine">咖啡因相关（caffeine）</option><option value="phone">睡前手机（phone）</option><option value="stress">生活压力（stress）</option><option value="irregular_schedule">作息不规律（irregular_schedule）</option><option value="overthinking">睡前过度思虑（overthinking）</option><option value="sleep_worry">过度担心睡眠（sleep_worry）</option><option value="sleep_restriction">睡眠时间限制（sleep_restriction）</option><option value="night_wake">夜醒应对（night_wake）</option><option value="exercise">运动相关（exercise）</option><option value="tea">喝茶相关（tea）</option><option value="smoking">抽烟相关（smoking）</option><option value="nap">午睡相关（nap）</option><option value="stimulus_control">睡眠刺激相关（stimulus_control）</option><option value="cognitive_restructuring">认知重构相关（cognitive_restructuring）</option></select>
+      <button type="button" id="loadHistory">刷新历史内容</button>
+    </div>
+    <p class="hint">历史内容按服务器排序值显示；漫画多文件上传时会按照保存的排序值连续显示。</p>
+    <div id="historyList" class="history-list"><article class="history-item"><video controls="" preload="metadata" poster="http://152.136.62.157/sleepwell-api/media/covers/20260528012624_ee6205993ab414c6.png"><source src="http://152.136.62.157/sleepwell-api/media/videos/20260528012624_8bc1203bf8e9d5fd.mp4"></video><div class="history-body"><h3>睡前一杯酒：安眠药还是碎梦剂？</h3><p><strong>类型：</strong>视频</p><p><strong>分类：</strong>饮酒相关</p><p><strong>触发问题：</strong>drinkingHabit</p><p><strong>触发答案：</strong>any_alcohol</p><p><strong>排序：</strong>100</p><p><strong>上传时间：</strong>2026-05-28T09:26:24</p><div class="preview-actions"><a class="preview-link" href="http://152.136.62.157/sleepwell-api/media/videos/20260528012624_8bc1203bf8e9d5fd.mp4" target="_blank" rel="noopener noreferrer">观看视频</a><a class="preview-link" href="http://152.136.62.157/sleepwell-api/media/covers/20260528012624_ee6205993ab414c6.png" target="_blank" rel="noopener noreferrer">打开封面</a><button class="small danger" type="button">删除</button></div></div></article></div>
+  </div>
+
+  <div class="card">
+    <h2>返回结果</h2>
+    <pre id="result">等待操作...</pre>
+  </div>
+</main>
+
+<script>
+  const cloudApiBase = 'http://152.136.62.157/sleepwell-api';
+  const base = location.pathname.startsWith('/sleepwell-api/') ? '/sleepwell-api' : cloudApiBase;
+  const form = document.querySelector('#uploadForm');
+  const result = document.querySelector('#result');
+  const preview = document.querySelector('#preview');
+  const previewCard = document.querySelector('#previewCard');
+  const categorySelect = document.querySelector('#category_key');
+  const contentTypeSelect = document.querySelector('#content_type');
+  const triggerPresetSelect = document.querySelector('#trigger_preset');
+  const triggerQuickList = document.querySelector('#triggerQuickList');
+  const questionSelect = document.querySelector('#trigger_question_key');
+  const answerHidden = document.querySelector('#trigger_answer_keys');
+  const answerList = document.querySelector('#answerList');
+  const fileInput = document.querySelector('#file');
+  const fileLabel = document.querySelector('#fileLabel');
+  const fileHint = document.querySelector('#fileHint');
+  const fileOrderList = document.querySelector('#fileOrderList');
+  const historyType = document.querySelector('#historyType');
+  const historyCategory = document.querySelector('#historyCategory');
+  const historyList = document.querySelector('#historyList');
+  const uploadButton = document.querySelector('#uploadButton');
+
+  let categories = [];
+  let surveyOptions = [];
+  let selectedFiles = [];
+
+  function show(value) {
+    result.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  }
+
+  function showPreviewMessage(message) {
+    preview.className = 'preview-empty';
+    preview.replaceChildren(document.createTextNode(message));
+  }
+
+  function publicUrl(url) {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('/') && location.origin && location.origin !== 'null') {
+      return `${location.origin}${url}`;
+    }
+    return url;
+  }
+
+  function isImage(url) {
+    return /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(url || '');
+  }
+
+  function formatBytes(size) {
+    if (!Number.isFinite(size)) return '';
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  function textLine(label, value) {
+    if (!value) return null;
+    const line = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = `${label}：`;
+    line.appendChild(strong);
+    line.appendChild(document.createTextNode(value));
+    return line;
+  }
+
+  function selectedAnswerKeys() {
+    return Array.from(answerList.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);
+  }
+
+  function syncAnswerHidden() {
+    answerHidden.value = JSON.stringify(selectedAnswerKeys());
+  }
+
+  function setAnswerKeys(keys) {
+    const wanted = new Set((keys || []).filter(Boolean));
+    answerList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+      input.checked = wanted.has(input.value);
+    });
+    syncAnswerHidden();
+  }
+
+  function renderAnswerOptions() {
+    const option = surveyOptions.find(item => item.key === questionSelect.value);
+    answerList.replaceChildren();
+    if (!option) {
+      answerList.className = 'answer-list empty';
+      answerList.textContent = '请先选择触发问题/场景';
+      answerHidden.value = '';
+      return;
+    }
+
+    answerList.className = 'answer-list';
+    for (const answer of option.answers || []) {
+      const label = document.createElement('label');
+      label.className = 'answer-option';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = answer.key;
+      checkbox.addEventListener('change', syncAnswerHidden);
+      const text = document.createElement('span');
+      text.appendChild(document.createTextNode(answer.label));
+      const key = document.createElement('div');
+      key.className = 'answer-key';
+      key.textContent = answer.key;
+      text.appendChild(key);
+      label.appendChild(checkbox);
+      label.appendChild(text);
+      answerList.appendChild(label);
+    }
+    syncAnswerHidden();
+  }
+
+  function renderTriggerQuickList() {
+    triggerQuickList.replaceChildren();
+    for (const item of categories) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `trigger-chip${triggerPresetSelect.value === item.category_key ? ' active' : ''}`;
+      button.textContent = item.name;
+      button.title = item.category_key;
+      button.addEventListener('click', () => {
+        triggerPresetSelect.value = item.category_key;
+        applyTriggerPreset();
+      });
+      triggerQuickList.appendChild(button);
+    }
+  }
+
+  function fillTriggerPresetSelect() {
+    triggerPresetSelect.replaceChildren();
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '请选择触发问题/场景';
+    triggerPresetSelect.appendChild(blank);
+
+    for (const item of categories) {
+      const option = document.createElement('option');
+      option.value = item.category_key;
+      option.textContent = `${item.name}（${item.category_key}）`;
+      option.dataset.category = item.category_key || '';
+      option.dataset.question = item.survey_question_key || '';
+      option.dataset.answers = item.survey_answer_key || '';
+      triggerPresetSelect.appendChild(option);
+    }
+    renderTriggerQuickList();
+  }
+
+  function applyTriggerPreset() {
+    const option = triggerPresetSelect.selectedOptions[0];
+    if (!option || !option.value) {
+      renderTriggerQuickList();
+      return;
+    }
+    if (option.dataset.category) {
+      categorySelect.value = option.dataset.category;
+    }
+    questionSelect.value = option.dataset.question || '';
+    renderAnswerOptions();
+    setAnswerKeys((option.dataset.answers || '').split(',').map(item => item.trim()));
+    renderTriggerQuickList();
+  }
+
+  function renderFileOrder() {
+    fileOrderList.replaceChildren();
+    if (!selectedFiles.length) {
+      fileOrderList.className = 'selected-files empty';
+      fileOrderList.textContent = '尚未选择文件';
+      return;
+    }
+
+    fileOrderList.className = 'selected-files';
+    selectedFiles.forEach((file, index) => {
+      const row = document.createElement('div');
+      row.className = 'file-row';
+
+      const indexBadge = document.createElement('span');
+      indexBadge.className = 'file-index';
+      indexBadge.textContent = String(index + 1);
+      row.appendChild(indexBadge);
+
+      const info = document.createElement('div');
+      const name = document.createElement('div');
+      name.textContent = file.name;
+      const meta = document.createElement('div');
+      meta.className = 'file-meta';
+      meta.textContent = formatBytes(file.size);
+      info.appendChild(name);
+      info.appendChild(meta);
+      row.appendChild(info);
+
+      const buttons = document.createElement('div');
+      buttons.className = 'file-buttons';
+      const up = document.createElement('button');
+      up.className = 'small neutral';
+      up.type = 'button';
+      up.textContent = '上移';
+      up.disabled = index === 0;
+      up.addEventListener('click', () => {
+        [selectedFiles[index - 1], selectedFiles[index]] = [selectedFiles[index], selectedFiles[index - 1]];
+        renderFileOrder();
+      });
+      const down = document.createElement('button');
+      down.className = 'small neutral';
+      down.type = 'button';
+      down.textContent = '下移';
+      down.disabled = index === selectedFiles.length - 1;
+      down.addEventListener('click', () => {
+        [selectedFiles[index + 1], selectedFiles[index]] = [selectedFiles[index], selectedFiles[index + 1]];
+        renderFileOrder();
+      });
+      buttons.appendChild(up);
+      buttons.appendChild(down);
+      row.appendChild(buttons);
+      fileOrderList.appendChild(row);
+    });
+  }
+
+  function renderMeta(item) {
+    const meta = document.createElement('div');
+    meta.className = 'preview-meta';
+    const title = document.createElement('h3');
+    title.textContent = item.title || '未命名内容';
+    meta.appendChild(title);
+    [
+      textLine('分类', item.categoryName || item.categoryKey),
+      textLine('副标题', item.subtitle),
+      textLine('时长/页数', item.duration),
+      textLine('触发问题', item.triggerQuestionKey),
+      textLine('触发答案', item.triggerAnswerKey),
+      textLine('说明', item.description),
+    ].filter(Boolean).forEach(node => meta.appendChild(node));
+    return meta;
+  }
+
+  function mediaLink(label, url) {
+    const link = document.createElement('a');
+    link.className = 'preview-link';
+    link.href = publicUrl(url);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = label;
+    return link;
+  }
+
+  function comicBaseTitle(title = '') {
+    return String(title || '')
+      .replace(/（第\d+页）$/, '')
+      .replace(/\(第\d+页\)$/, '')
+      .trim();
+  }
+
+  function comicPageIndex(item) {
+    const match = String(item?.title || '').match(/第(\d+)页/);
+    return match ? Number(match[1]) : Number(item?.sortOrder || 0);
+  }
+
+  function comicGroupKey(item) {
+    return [
+      item.categoryKey || '',
+      item.triggerQuestionKey || '',
+      item.triggerAnswerKey || '',
+      comicBaseTitle(item.title || '')
+    ].join('|');
+  }
+
+  function groupContentItems(items) {
+    const groups = new Map();
+    for (const item of items || []) {
+      if (!item) continue;
+      if (item.type !== 'comic') {
+        groups.set(item.id, {type: 'single', item, pages: [item]});
+        continue;
+      }
+      const key = comicGroupKey(item);
+      if (!groups.has(key)) groups.set(key, {type: 'comic', item, pages: []});
+      groups.get(key).pages.push(item);
+    }
+    return Array.from(groups.values()).map(group => {
+      group.pages.sort((a, b) => {
+        const sortDelta = Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+        return sortDelta || (comicPageIndex(a) - comicPageIndex(b));
+      });
+      group.item = group.pages[0] || group.item;
+      return group;
+    });
+  }
+
+  function groupTitle(group) {
+    if (group.type === 'comic' && group.pages.length > 1) return comicBaseTitle(group.item.title || '');
+    return group.item.title || '未命名内容';
+  }
+
+  function appendComicPages(container, pages) {
+    const pageGrid = document.createElement('div');
+    pageGrid.className = 'comic-pages';
+    pages.forEach((page, index) => {
+      const imageUrl = publicUrl(isImage(page.url) ? page.url : page.cover);
+      if (!imageUrl) return;
+      const link = document.createElement('a');
+      link.className = 'comic-page';
+      link.href = publicUrl(page.url || page.cover);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      const badge = document.createElement('span');
+      badge.textContent = `第 ${index + 1} 页`;
+      const image = document.createElement('img');
+      image.src = imageUrl;
+      image.alt = page.title || `漫画第${index + 1}页`;
+      link.appendChild(badge);
+      link.appendChild(image);
+      pageGrid.appendChild(link);
+    });
+    container.appendChild(pageGrid);
+  }
+
+  function renderVideo(item) {
+    if (!item || !item.url) {
+      showPreviewMessage('当前条件下暂未找到可播放的视频。请先上传视频，或检查分类与绑定规则。');
+      return;
+    }
+    preview.className = 'preview-video';
+    preview.replaceChildren();
+
+    const holder = document.createElement('div');
+    holder.appendChild(renderMeta(item));
+
+    const video = document.createElement('video');
+    video.controls = true;
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    if (item.cover) video.poster = publicUrl(item.cover);
+
+    const source = document.createElement('source');
+    source.src = publicUrl(item.url);
+    video.appendChild(source);
+    holder.appendChild(video);
+
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = '视频已自动加载。若浏览器阻止自动播放，可直接点击播放器播放；如需声音，请在播放器中取消静音。';
+    holder.appendChild(hint);
+
+    const actions = document.createElement('div');
+    actions.className = 'preview-actions';
+    actions.appendChild(mediaLink('新窗口观看视频', item.url));
+    if (item.cover) actions.appendChild(mediaLink('打开封面图', item.cover));
+    holder.appendChild(actions);
+
+    preview.appendChild(holder);
+  }
+
+  function renderComics(items) {
+    const comics = (items || []).filter(item => item && item.url);
+    if (!comics.length) {
+      showPreviewMessage('当前条件下暂未找到漫画。请先上传漫画，或检查分类与绑定规则。');
+      return;
+    }
+    preview.className = '';
+    preview.replaceChildren();
+
+    const list = document.createElement('div');
+    list.className = 'comic-list';
+    groupContentItems(comics).forEach((group, index) => {
+      const item = group.item;
+      const card = document.createElement('article');
+      card.className = group.type === 'comic' ? 'comic-item comic-group' : 'comic-item';
+      appendComicPages(card, group.pages);
+
+      const body = document.createElement('div');
+      body.className = 'comic-body';
+      const title = document.createElement('h3');
+      title.textContent = `${index + 1}. ${groupTitle(group) || '未命名漫画'}`;
+      body.appendChild(title);
+      [
+        textLine('分类', item.categoryName || item.categoryKey),
+        textLine('副标题', item.subtitle),
+        textLine('页数', group.type === 'comic' ? `${group.pages.length}页` : item.duration),
+        textLine('触发答案', item.triggerAnswerKey),
+      ].filter(Boolean).forEach(node => body.appendChild(node));
+      const actions = document.createElement('div');
+      actions.className = 'preview-actions';
+      group.pages.forEach((page, pageIndex) => {
+        actions.appendChild(mediaLink(`打开第${pageIndex + 1}页`, page.url));
+      });
+      if (item.cover) actions.appendChild(mediaLink('打开封面图', item.cover));
+      body.appendChild(actions);
+      card.appendChild(body);
+      list.appendChild(card);
+    });
+
+    preview.appendChild(list);
+  }
+
+  function recommendationPayload() {
+    const category = categorySelect.value;
+    const questionKey = questionSelect.value;
+    const keys = selectedAnswerKeys();
+    const answers = {};
+    if (questionKey && keys.length) {
+      answers[questionKey] = keys.length === 1 ? keys[0] : keys;
+    }
+    return {
+      categories: category ? [category] : [],
+      answers
+    };
+  }
+
+  async function testRecommendation(kind) {
+    const label = kind === 'video' ? '视频' : '漫画';
+    show(`正在测试${label}推荐，请稍候...`);
+    showPreviewMessage(`正在加载${label}内容...`);
+    previewCard.scrollIntoView({behavior: 'smooth', block: 'start'});
+
+    const res = await fetch(`${base}/v1/survey/recommendations`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(recommendationPayload())
+    });
+    const json = await res.json();
+    show(json);
+
+    const data = json.data || {};
+    if (kind === 'video') {
+      const video = data.autoPlayVideo || (data.contents || []).find(item => item.type === 'video');
+      renderVideo(video);
+      return;
+    }
+    const comics = data.comicsToSend || (data.contents || []).filter(item => item.type === 'comic');
+    renderComics(comics);
+  }
+
+  function fillSelect(select, items, placeholder) {
+    select.replaceChildren();
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = placeholder;
+    select.appendChild(blank);
+    for (const item of items) {
+      const option = document.createElement('option');
+      option.value = item.value;
+      option.textContent = item.text;
+      select.appendChild(option);
+    }
+  }
+
+  async function loadCategories() {
+    const res = await fetch(`${base}/v1/content-categories?_=${Date.now()}`, {cache: 'no-store'});
+    const json = await res.json();
+    categories = json.data || [];
+    const options = categories.map(item => ({
+      value: item.category_key,
+      text: `${item.name}（${item.category_key}）`
+    }));
+    fillSelect(categorySelect, options, '请选择内容类型标签');
+    fillSelect(historyCategory, options, '全部分类');
+    fillTriggerPresetSelect();
+  }
+
+  async function loadSurveyOptions() {
+    const res = await fetch(`${base}/v1/survey/options?_=${Date.now()}`, {cache: 'no-store'});
+    const json = await res.json();
+    surveyOptions = json.data || [];
+    fillSelect(
+      questionSelect,
+      surveyOptions.map(item => ({value: item.key, text: `${item.label}（${item.key}）`})),
+      '请选择触发问题 Key'
+    );
+    renderAnswerOptions();
+  }
+
+  function handleContentTypeChange() {
+    const isComic = contentTypeSelect.value === 'comic';
+    fileInput.multiple = isComic;
+    fileInput.accept = isComic ? 'image/*,.pdf,.webp' : 'video/*';
+    fileLabel.textContent = isComic ? '漫画文件' : '视频文件';
+    fileHint.textContent = isComic
+      ? '漫画可一次选择多个文件；下方顺序就是保存和显示顺序，可用“上移/下移”调整。'
+      : '视频一次上传一个文件。';
+    selectedFiles = [];
+    fileInput.value = '';
+    renderFileOrder();
+  }
+
+  function buildUploadData(file, index, total) {
+    const data = new FormData();
+    const type = contentTypeSelect.value;
+    const baseSort = Number.parseInt(form.sort_order.value, 10) || 100;
+    const baseTitle = form.title.value.trim();
+    const title = type === 'comic' && total > 1 ? `${baseTitle}（第${index + 1}页）` : baseTitle;
+    const duration = form.duration.value.trim() || (type === 'comic' && total > 1 ? `${index + 1}/${total}页` : '');
+
+    data.append('content_type', type);
+    data.append('category_key', categorySelect.value);
+    data.append('title', title);
+    data.append('subtitle', form.subtitle.value.trim());
+    data.append('duration', duration);
+    data.append('description', form.description.value.trim());
+    data.append('tags', form.tags.value.trim());
+    data.append('trigger_question_key', questionSelect.value);
+    data.append('trigger_answer_keys', JSON.stringify(selectedAnswerKeys()));
+    data.append('sort_order', String(baseSort + index));
+    data.append('file', file, file.name);
+    if (form.cover.files[0]) {
+      data.append('cover', form.cover.files[0], form.cover.files[0].name);
+    }
+    return data;
+  }
+
+  async function uploadSelectedContent() {
+    if (!categorySelect.value) {
+      categorySelect.focus();
+      throw new Error('请选择内容类型标签');
+    }
+    if (!form.title.value.trim()) {
+      form.title.focus();
+      throw new Error('请输入标题');
+    }
+    if (!selectedFiles.length) {
+      fileInput.focus();
+      throw new Error('请选择要上传的文件');
+    }
+    if (contentTypeSelect.value === 'video' && selectedFiles.length > 1) {
+      selectedFiles = selectedFiles.slice(0, 1);
+      renderFileOrder();
+    }
+
+    uploadButton.disabled = true;
+    const uploaded = [];
+    try {
+      for (let index = 0; index < selectedFiles.length; index += 1) {
+        show(`正在上传第 ${index + 1}/${selectedFiles.length} 个文件，请稍候...`);
+        const res = await fetch(`${base}/v1/contents/upload`, {
+          method: 'POST',
+          headers: form.token.value ? {'X-Admin-Token': form.token.value} : {},
+          body: buildUploadData(selectedFiles[index], index, selectedFiles.length)
+        });
+        const text = await res.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (_) {
+          throw new Error(text || `上传失败：HTTP ${res.status}`);
+        }
+        if (!res.ok) {
+          throw new Error(json.detail || `上传失败：HTTP ${res.status}`);
+        }
+        uploaded.push(json.data);
+      }
+    } finally {
+      uploadButton.disabled = false;
+    }
+    return uploaded;
+  }
+
+  function resetForNewContent() {
+    const token = form.token.value;
+    form.reset();
+    form.token.value = token;
+    triggerPresetSelect.value = '';
+    selectedFiles = [];
+    renderFileOrder();
+    renderAnswerOptions();
+    handleContentTypeChange();
+    categorySelect.value = '';
+    questionSelect.value = '';
+    renderAnswerOptions();
+    renderTriggerQuickList();
+    show('已准备新增内容。');
+    showPreviewMessage('请填写新内容信息并上传。');
+    form.title.focus();
+  }
+
+  function renderHistory(items) {
+    historyList.replaceChildren();
+    if (!items.length) {
+      historyList.className = 'preview-empty';
+      historyList.textContent = '暂无历史内容。';
+      return;
+    }
+    historyList.className = 'history-list';
+    for (const group of groupContentItems(items)) {
+      const item = group.item;
+      const card = document.createElement('article');
+      card.className = group.type === 'comic' ? 'history-item history-group' : 'history-item';
+
+      if (item.type === 'video' && item.url) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        if (item.cover) video.poster = publicUrl(item.cover);
+        const source = document.createElement('source');
+        source.src = publicUrl(item.url);
+        video.appendChild(source);
+        card.appendChild(video);
+      } else if (group.type === 'comic') {
+        appendComicPages(card, group.pages);
+      } else if (item.url || item.cover) {
+        appendComicPages(card, [item]);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'history-body';
+      const title = document.createElement('h3');
+      title.textContent = groupTitle(group);
+      body.appendChild(title);
+      [
+        textLine('类型', item.type === 'video' ? '视频' : `漫画（共 ${group.pages.length} 页）`),
+        textLine('分类', item.categoryName || item.categoryKey),
+        textLine('触发问题', item.triggerQuestionKey),
+        textLine('触发答案', item.triggerAnswerKey),
+        textLine('排序', item.sortOrder),
+        textLine('上传时间', item.createdAt),
+      ].filter(Boolean).forEach(node => body.appendChild(node));
+      const actions = document.createElement('div');
+      actions.className = 'preview-actions';
+      if (item.type === 'video' && item.url) {
+        actions.appendChild(mediaLink('观看视频', item.url));
+      } else {
+        group.pages.forEach((page, pageIndex) => {
+          actions.appendChild(mediaLink(`打开第${pageIndex + 1}页`, page.url));
+        });
+      }
+      if (item.cover) actions.appendChild(mediaLink('打开封面', item.cover));
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'small danger';
+      deleteButton.type = 'button';
+      deleteButton.textContent = '删除';
+      deleteButton.addEventListener('click', () => deleteHistoryItem(item, group.pages));
+      actions.appendChild(deleteButton);
+      body.appendChild(actions);
+      card.appendChild(body);
+      historyList.appendChild(card);
+    }
+  }
+
+  async function deleteHistoryItem(item, pages = [item]) {
+    if (!form.token.value) {
+      show('删除历史内容前，请先输入管理口令。');
+      form.token.focus();
+      return;
+    }
+    const deleteTitle = pages.length > 1 ? comicBaseTitle(item.title || '') : (item.title || item.id);
+    const ok = window.confirm(`确认删除“${deleteTitle}”？删除后历史列表和 APP 推荐中都不会再显示该内容。`);
+    if (!ok) return;
+
+    show(`正在删除：${deleteTitle}...`);
+    const deleted = [];
+    for (const page of pages) {
+      const res = await fetch(`${base}/v1/health-contents/${encodeURIComponent(page.id)}`, {
+        method: 'DELETE',
+        headers: {'X-Admin-Token': form.token.value},
+        cache: 'no-store'
+      });
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (_) {
+        json = {detail: text};
+      }
+      if (!res.ok) {
+        const message = json.detail || `删除失败：HTTP ${res.status}`;
+        show(`删除失败：${message}`);
+        return;
+      }
+      deleted.push(json.data || page.id);
+    }
+    show({deleted});
+    showPreviewMessage(`已删除：${deleteTitle}（${pages.length}项）`);
+    await loadHistory();
+  }
+
+  async function loadHistory() {
+    historyList.className = 'preview-empty';
+    historyList.textContent = '正在加载历史内容...';
+    const params = new URLSearchParams();
+    params.set('uploaded_only', '1');
+    if (historyType.value) params.set('content_type', historyType.value);
+    if (historyCategory.value) params.set('category_key', historyCategory.value);
+    const suffix = params.toString() ? `?${params}` : '';
+    const res = await fetch(`${base}/v1/health-contents${suffix}`, {cache: 'no-store'});
+    const json = await res.json();
+    renderHistory(json.data || []);
+  }
+
+  contentTypeSelect.addEventListener('change', handleContentTypeChange);
+  triggerPresetSelect.addEventListener('change', applyTriggerPreset);
+  categorySelect.addEventListener('change', () => {
+    triggerPresetSelect.value = categorySelect.value || '';
+    applyTriggerPreset();
+  });
+  questionSelect.addEventListener('change', () => {
+    triggerPresetSelect.value = '';
+    renderAnswerOptions();
+    renderTriggerQuickList();
+  });
+  fileInput.addEventListener('change', () => {
+    selectedFiles = Array.from(fileInput.files || []);
+    renderFileOrder();
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uploaded = await uploadSelectedContent();
+      show({data: uploaded});
+      if (contentTypeSelect.value === 'video') {
+        renderVideo(uploaded[0]);
+      } else {
+        renderComics(uploaded);
+      }
+      previewCard.scrollIntoView({behavior: 'smooth', block: 'start'});
+      await loadHistory();
+    } catch (err) {
+      const message = err && err.message ? err.message : String(err);
+      show(`上传失败：${message}`);
+      showPreviewMessage(`上传失败：${message}`);
+    }
+  });
+
+  document.querySelector('#newContent').addEventListener('click', resetForNewContent);
+  document.querySelector('#testVideo').addEventListener('click', () => {
+    testRecommendation('video').catch(err => {
+      show(`测试视频失败：${err.message}`);
+      showPreviewMessage(`测试视频失败：${err.message}`);
+    });
+  });
+  document.querySelector('#testComic').addEventListener('click', () => {
+    testRecommendation('comic').catch(err => {
+      show(`测试漫画失败：${err.message}`);
+      showPreviewMessage(`测试漫画失败：${err.message}`);
+    });
+  });
+  document.querySelector('#loadHistory').addEventListener('click', () => {
+    loadHistory().catch(err => {
+      historyList.className = 'preview-empty danger-text';
+      historyList.textContent = `加载历史内容失败：${err.message}`;
+    });
+  });
+
+  Promise.all([loadCategories(), loadSurveyOptions()])
+    .then(() => {
+      handleContentTypeChange();
+      return loadHistory();
+    })
+    .catch(err => {
+      show(`初始化失败：${err.message}`);
+      showPreviewMessage(`初始化失败：${err.message}`);
+    });
+</script>
+
+
+</body></html>

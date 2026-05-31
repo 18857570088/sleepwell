@@ -2,8 +2,9 @@
   "enabled": true,
   "apiBaseUrl": "http://152.136.62.157/sleepwell-api",
   "sleepRecordsEndpoint": "/v1/sleep-records?days=7&user_id=demo",
-  "healthContentsEndpoint": "/v1/health-contents",
+  "healthContentsEndpoint": "/v1/health-contents?uploaded_only=true",
+  "contentProgressEndpoint": "/v1/content-progress?user_id=demo",
   "deviceStatusEndpoint": "/v1/device/status?user_id=demo",
   "uploadEndpoint": "/v1/uploads",
-  "mode": "cloud-with-local-fallback"
+  "mode": "cloud-only"
 }

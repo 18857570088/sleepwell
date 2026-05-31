@@ -8,6 +8,7 @@ local.properties
 *.env
 !*.env.example
 key.properties
+design/key.txt
 *.jks
 *.keystore
 
